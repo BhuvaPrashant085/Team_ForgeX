@@ -394,15 +394,260 @@
         font-size: 12px;
         color: #0c4a6e;
       }
-      .empty-state {
+      .receipt-container {
+        width: 350px;
+        background: #fff;
+        padding: 20px;
+        margin: 0 auto;
+        font-family: 'Courier New', Courier, monospace;
+        color: #000;
+        border: 1px solid #ddd;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      }
+
+      .receipt-header {
         text-align: center;
-        color: #bbb;
+        line-height: 1.2;
+      }
+
+      .brand-logo { font-size: 28px; font-weight: bold; margin: 0; }
+      .sub-brand { font-size: 10px; margin-top: -5px; }
+      .service-type { font-size: 18px; margin: 10px 0; border: 1px solid black; display: inline-block; padding: 2px 10px; }
+      .receipt-header p { font-size: 12px; margin: 2px 0; }
+
+      .dashed-line { border: none; border-top: 1px dashed #000; margin: 10px 0; }
+
+      .meta-info { font-size: 13px; }
+      .row { display: flex; justify-content: space-between; margin-bottom: 5px; }
+
+      .items-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+      .items-table th { border-bottom: 1px dashed #000; padding-bottom: 5px; }
+      .items-table td { padding: 5px 0; vertical-align: top; }
+      .text-left { text-align: left; }
+      .text-center { text-align: center; }
+      .text-right { text-align: right; }
+
+      .bill-summary { font-size: 14px; }
+      .summary-row { display: flex; justify-content: space-between; padding: 3px 0; }
+      .total-row { font-weight: bold; font-size: 18px; }
+
+      .receipt-footer { text-align: center; font-size: 12px; margin-top: 15px; }
+
+      /* Guest Entry Modal */
+      .guest-modal-bg {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 200;
+        align-items: center;
+        justify-content: center;
+      }
+      .guest-modal-bg.show {
+        display: flex;
+      }
+      .guest-modal {
+        background: #fff;
+        border-radius: 16px;
+        padding: 32px;
+        width: 400px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      }
+      .guest-modal h2 {
+        font-size: 20px;
+        font-weight: 700;
+        margin-bottom: 20px;
+        color: #1a1a18;
+      }
+      .form-group {
+        margin-bottom: 16px;
+      }
+      .form-group label {
+        display: block;
         font-size: 13px;
-        padding: 20px 0;
+        font-weight: 600;
+        margin-bottom: 6px;
+        color: #555;
+      }
+      .form-group input {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #e0dfd8;
+        border-radius: 8px;
+        font-size: 14px;
+        font-family: system-ui, sans-serif;
+      }
+      .form-group input:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      }
+      .guest-modal-buttons {
+        display: flex;
+        gap: 12px;
+        margin-top: 24px;
+      }
+      .btn-cancel, .btn-confirm {
+        flex: 1;
+        padding: 12px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .btn-cancel {
+        background: #f0f0f0;
+        color: #666;
+      }
+      .btn-cancel:hover {
+        background: #e0e0e0;
+      }
+      .btn-confirm {
+        background: #3b82f6;
+        color: #fff;
+      }
+      .btn-confirm:hover {
+        background: #2563eb;
+      }
+
+      /* Guest Info Display */
+      .guest-info {
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 12px;
+        font-size: 13px;
+        display: none;
+      }
+      .guest-info.show {
+        display: block;
+      }
+      .guest-info-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 6px;
+      }
+      .guest-info-row:last-child {
+        margin-bottom: 0;
+      }
+
+      /* Points Redemption Modal */
+      .redeem-modal-bg {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 200;
+        align-items: center;
+        justify-content: center;
+      }
+      .redeem-modal-bg.show {
+        display: flex;
+      }
+      .redeem-modal {
+        background: #fff;
+        border-radius: 16px;
+        padding: 32px;
+        width: 400px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      }
+      .redeem-modal h2 {
+        font-size: 20px;
+        font-weight: 700;
+        margin-bottom: 16px;
+      }
+      .points-display {
+        background: #fef3c7;
+        border: 1px solid #fcd34d;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 16px;
+        text-align: center;
+      }
+      .points-value {
+        font-size: 28px;
+        font-weight: 700;
+        color: #d97706;
+      }
+      .points-label {
+        font-size: 12px;
+        color: #92400e;
+        margin-top: 4px;
+      }
+      .redeem-buttons {
+        display: flex;
+        gap: 12px;
+        margin-top: 20px;
+      }
+      .redeem-buttons button {
+        flex: 1;
+        padding: 12px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .btn-skip-redeem {
+        background: #f0f0f0;
+        color: #666;
+      }
+      .btn-skip-redeem:hover {
+        background: #e0e0e0;
+      }
+      .btn-use-points {
+        background: #d97706;
+        color: #fff;
+      }
+      .btn-use-points:hover {
+        background: #b45309;
       }
     </style>
   </head>
   <body>
+    <!-- Guest Entry Modal -->
+    <div class="guest-modal-bg show" id="guestModalBg">
+      <div class="guest-modal">
+        <h2>👤 Guest Information</h2>
+        <form id="guestForm" onsubmit="handleGuestSubmit(event)">
+          <div class="form-group">
+            <label>Guest Name *</label>
+            <input type="text" id="guestName" placeholder="Enter guest name" required>
+          </div>
+          <div class="form-group">
+            <label>Mobile Number *</label>
+            <input type="tel" id="guestMobile" placeholder="Enter mobile number" required>
+          </div>
+          <div class="guest-modal-buttons">
+            <button type="button" class="btn-cancel" onclick="skipGuestEntry()">Skip</button>
+            <button type="submit" class="btn-confirm">Fetch Details</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Points Redemption Modal -->
+    <div class="redeem-modal-bg" id="redeemModalBg">
+      <div class="redeem-modal">
+        <h2>⭐ Redeem Your Points</h2>
+        <div class="points-display">
+          <div class="points-value" id="pointsValue">0</div>
+          <div class="points-label">Points Available</div>
+        </div>
+        <p id="redeemInfo" style="font-size: 13px; color: #666; margin-bottom: 16px;">
+          You can redeem your points for a discount on this bill.
+        </p>
+        <div class="redeem-buttons">
+          <button class="btn-skip-redeem" onclick="skipRedemption()">Skip</button>
+          <button class="btn-use-points" onclick="redeemAllPoints()">Use All Points</button>
+        </div>
+      </div>
+    </div>
+
     <header>
       <a href="/" class="back">← Back</a>
       <h1>{{ table.name }}</h1>
@@ -475,6 +720,18 @@
           >
         </div>
 
+        <!-- Guest Info Display -->
+        <div class="guest-info" id="guestInfoDisplay">
+          <div class="guest-info-row">
+            <span>👤 Guest:</span>
+            <strong id="displayGuestName">Guest</strong>
+          </div>
+          <div class="guest-info-row">
+            <span>⭐ Points:</span>
+            <strong id="displayGuestPoints">0</strong>
+          </div>
+        </div>
+
         <div class="bill-items" id="billItems">
           <div class="empty-state" id="emptyState">
             No items yet.<br />Use the mic to add items.
@@ -487,6 +744,9 @@
           </div>
           <div class="total-row">
             <span>GST (5%)</span><span id="gst">₹0</span>
+          </div>
+          <div class="total-row" id="discountRow" style="display: none; color: #16a34a;">
+            <span>Discount (Points)</span><span id="discount">-₹0</span>
           </div>
           <div class="total-row grand">
             <span>Total</span><span id="total">₹0</span>
@@ -595,6 +855,62 @@
 
                               const BILL_ID = {{ bill.id }};
                               const CSRF = '{{ csrf_token }}';
+
+                              // ── Guest Management ──────────────────────
+                              let currentGuest = null;
+                              let redeemedPoints = 0;
+                              let discountAmount = 0;
+
+                              async function handleGuestSubmit(event) {
+                                event.preventDefault();
+                                const name = document.getElementById('guestName').value.trim();
+                                const mobile = document.getElementById('guestMobile').value.trim();
+
+                                if (!name || !mobile) {
+                                  alert('Please enter both name and mobile number.');
+                                  return;
+                                }
+
+                                try {
+                                  const res = await fetch('/api/customer/', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+                                    body: JSON.stringify({ name, mobile_number: mobile })
+                                  });
+                                  const data = await res.json();
+
+                                  if (res.ok && data.customer) {
+                                    currentGuest = data.customer;
+                                    document.getElementById('guestModalBg').classList.remove('show');
+                                    showGuestInfo();
+                                    document.getElementById('micBtn').focus();
+                                  } else {
+                                    alert(data.message || 'Customer not found. Proceeding as guest.');
+                                    currentGuest = { name, mobile_number: mobile, points: 0, id: null };
+                                    document.getElementById('guestModalBg').classList.remove('show');
+                                    showGuestInfo();
+                                  }
+                                } catch (err) {
+                                  console.error('Error fetching customer:', err);
+                                  alert('Error fetching customer details. Proceeding as guest.');
+                                  currentGuest = { name, mobile_number: mobile, points: 0, id: null };
+                                  document.getElementById('guestModalBg').classList.remove('show');
+                                  showGuestInfo();
+                                }
+                              }
+
+                              function skipGuestEntry() {
+                                currentGuest = { name: 'Guest', mobile_number: '', points: 0, id: null };
+                                document.getElementById('guestModalBg').classList.remove('show');
+                                showGuestInfo();
+                              }
+
+                              function showGuestInfo() {
+                                const guestDisplay = document.getElementById('guestInfoDisplay');
+                                document.getElementById('displayGuestName').textContent = currentGuest.name || 'Guest';
+                                document.getElementById('displayGuestPoints').textContent = (currentGuest.points || 0) + ' pts';
+                                guestDisplay.classList.add('show');
+                              }
 
                               // ── Voice Recognition ──────────────────────
                               const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -1001,7 +1317,6 @@
                                   empty.style.display = 'block';
                                   totals.style.display = 'none';
                                   genBtn.disabled = true;
-                                  // Don't disable generating bills if status is pending
                                   if (data.status !== 'pending') {
                                     genBtn.disabled = true;
                                   }
@@ -1022,7 +1337,18 @@
 
                                 document.getElementById('subtotal').textContent = '₹' + data.subtotal;
                                 document.getElementById('gst').textContent = '₹' + data.gst_amount;
-                                document.getElementById('total').textContent = '₹' + data.total;
+
+                                // Display discount if applied
+                                const discountRow = document.getElementById('discountRow');
+                                if (discountAmount > 0) {
+                                  discountRow.style.display = 'flex';
+                                  document.getElementById('discount').textContent = '-₹' + discountAmount;
+                                  const finalTotal = (parseInt(data.subtotal) + parseInt(data.gst_amount) - discountAmount);
+                                  document.getElementById('total').textContent = '₹' + finalTotal;
+                                } else {
+                                  discountRow.style.display = 'none';
+                                  document.getElementById('total').textContent = '₹' + data.total;
+                                }
                               }
 
                               async function removeItem(itemId) {
@@ -1035,11 +1361,44 @@
                               }
 
                               async function generateBill() {
-                                const name = prompt('Enter customer name (or leave blank for Guest):') || 'Guest';
+                                const name = currentGuest?.name || 'Guest';
+                                
+                                // Show points redemption modal if guest has points
+                                if (currentGuest && currentGuest.points > 0) {
+                                  document.getElementById('pointsValue').textContent = currentGuest.points;
+                                  document.getElementById('redeemModalBg').classList.add('show');
+                                  return;
+                                }
+
+                                // Proceed with bill generation
+                                proceedWithBillGeneration(name);
+                              }
+
+                              function skipRedemption() {
+                                redeemedPoints = 0;
+                                discountAmount = 0;
+                                document.getElementById('redeemModalBg').classList.remove('show');
+                                proceedWithBillGeneration(currentGuest?.name || 'Guest');
+                              }
+
+                              function redeemAllPoints() {
+                                redeemedPoints = currentGuest.points || 0;
+                                // 1 point = ₹1 discount
+                                discountAmount = redeemedPoints;
+                                document.getElementById('redeemModalBg').classList.remove('show');
+                                proceedWithBillGeneration(currentGuest?.name || 'Guest');
+                              }
+
+                              async function proceedWithBillGeneration(name) {
                                 const res = await fetch(`/api/bill/${BILL_ID}/generate/`, {
                                   method: 'POST',
                                   headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
-                                  body: JSON.stringify({ customer_name: name })
+                                  body: JSON.stringify({ 
+                                    customer_name: name,
+                                    customer_id: currentGuest?.id,
+                                    points_redeemed: redeemedPoints,
+                                    discount: discountAmount
+                                  })
                                 });
                                 const data = await res.json();
                                 if (!res.ok || !data.success) {
@@ -1059,16 +1418,12 @@
                                 document.getElementById('modalTotal').innerHTML = `<span>Total</span><span>₹${data.total}</span>`;
 
                                 document.getElementById('modalBg').classList.add('show');
-
-                                // Auto-close modal after 2 seconds and show payment options on page
-                                setTimeout(() => {
-                                  document.getElementById('modalBg').classList.remove('show');
-                                  showPaymentOptions();
-                                }, 2000);
+                                // Keep modal open until user explicitly closes it.
                               }
 
                               function closeModal() {
                                 document.getElementById('modalBg').classList.remove('show');
+                                showPaymentOptions();
                               }
 
                               function showPaymentOptions() {
@@ -1167,10 +1522,11 @@
                                 loadMenu();
                                 await refreshBill();
 
-                                // Billing page should keep mic active by default.
-                                if (recognition) {
-                                  startListening();
-                                }
+                                // Show guest entry modal on page load
+                                document.getElementById('guestModalBg').classList.add('show');
+
+                                // Billing page should keep mic active by default (after guest entry).
+                                // Will be activated after guest info is filled
                               }
                               init();
     </script>

@@ -1,14 +1,12 @@
-from pyexpat.errors import messages
 import random
 
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q
+from django.contrib import messages
 import json
 import re
-
-from flask import redirect
 
 from .models import MenuItem, Staff, Table, Customer, Bill
 
@@ -102,6 +100,42 @@ def fuzzy_match(query, menu_items):
         if score > best_score:
             best, best_score = item, score
     return best if best_score >= 0.4 else None
+
+
+@csrf_exempt
+def fetch_customer(request):
+    """
+    POST { "name": "John", "mobile_number": "9876543210" }
+    Returns customer data if found, else error.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST only'}, status=405)
+
+    data = json.loads(request.body)
+    name = data.get('name', '').strip()
+    mobile = data.get('mobile_number', '').strip()
+
+    if not name or not mobile:
+        return JsonResponse({'error': 'Name and mobile number required'}, status=400)
+
+    try:
+        customer = Customer.objects.get(name=name, mobile=mobile)
+        return JsonResponse({
+            'success': True,
+            'customer': {
+                'id': customer.id,
+                'name': customer.name,
+                'mobile_number': customer.mobile,
+                'points': customer.points or 0,
+            }
+        })
+    except Customer.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': 'Customer not found. Please add them first.',
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 
 @csrf_exempt
@@ -218,8 +252,16 @@ def generate_bill(request, bill_id):
     if not bill.items:
         return JsonResponse({'error': 'Cannot generate bill without items'}, status=400)
 
-    customer_name = json.loads(request.body).get('customer_name', 'Guest')
+    data = json.loads(request.body)
+    customer_name = data.get('customer_name', 'Guest')
+    customer_id = data.get('customer_id')
+    points_redeemed = data.get('points_redeemed', 0)
+    discount = data.get('discount', 0)
+    
     bill.customer_name = customer_name
+    if customer_id:
+        bill.customer_id = customer_id
+    bill.discount_amount = discount
     bill.status = 'pending'
     bill.save()
 
@@ -235,6 +277,8 @@ def generate_bill(request, bill_id):
         'subtotal': float(bill.subtotal),
         'gst_amount': float(bill.gst_amount),
         'total': float(bill.total),
+        'discount': discount,
+        'final_total': float(bill.total - discount),
     })
 
 

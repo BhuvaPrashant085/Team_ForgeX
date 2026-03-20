@@ -10,6 +10,9 @@ urlpatterns = [
     # Voice API
     path('api/parse-voice/', views.parse_voice, name='parse_voice'),
 
+    # Customer API
+    path('api/customer/', views.fetch_customer, name='fetch_customer'),
+
     # Bill APIs
     path('api/bill/<int:bill_id>/', views.get_bill, name='get_bill'),
     path('api/bill/<int:bill_id>/add-items/', views.add_items_to_bill, name='add_items'),
