@@ -277,6 +277,7 @@ def generate_bill(request, bill_id):
         'subtotal': float(bill.subtotal),
         'gst_amount': float(bill.gst_amount),
         'total': float(bill.total),
+        'discount_amount': float(discount),
         'discount': discount,
         'final_total': float(bill.total - discount),
     })

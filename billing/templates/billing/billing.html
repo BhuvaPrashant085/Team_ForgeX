@@ -606,11 +606,16 @@
       .btn-use-points:hover {
         background: #b45309;
       }
+
+      .receipt-container-modal {
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 13px;
+      }
     </style>
   </head>
   <body>
-    <!-- Guest Entry Modal -->
-    <div class="guest-modal-bg show" id="guestModalBg">
+    <!-- Guest Entry Modal (shown only when generating bill) -->
+    <div class="guest-modal-bg" id="guestModalBg">
       <div class="guest-modal">
         <h2>👤 Guest Information</h2>
         <form id="guestForm" onsubmit="handleGuestSubmit(event)">
@@ -720,18 +725,6 @@
           >
         </div>
 
-        <!-- Guest Info Display -->
-        <div class="guest-info" id="guestInfoDisplay">
-          <div class="guest-info-row">
-            <span>👤 Guest:</span>
-            <strong id="displayGuestName">Guest</strong>
-          </div>
-          <div class="guest-info-row">
-            <span>⭐ Points:</span>
-            <strong id="displayGuestPoints">0</strong>
-          </div>
-        </div>
-
         <div class="bill-items" id="billItems">
           <div class="empty-state" id="emptyState">
             No items yet.<br />Use the mic to add items.
@@ -744,9 +737,6 @@
           </div>
           <div class="total-row">
             <span>GST (5%)</span><span id="gst">₹0</span>
-          </div>
-          <div class="total-row" id="discountRow" style="display: none; color: #16a34a;">
-            <span>Discount (Points)</span><span id="discount">-₹0</span>
           </div>
           <div class="total-row grand">
             <span>Total</span><span id="total">₹0</span>
@@ -809,19 +799,32 @@
 
     <!-- Print Modal -->
     <div class="modal-bg" id="modalBg">
-      <div class="modal">
-        <h2>🧾 Bill Generated!</h2>
-        <div
-          style="
-            text-align: center;
-            color: #888;
-            font-size: 12px;
-            margin-bottom: 12px;
-          "
-          id="modalMeta"
-        ></div>
-        <div id="modalItems"></div>
-        <div class="m-total" id="modalTotal"></div>
+      <div class="modal receipt-container-modal">
+        <div style="text-align: center; margin-bottom: 16px;">
+          <h2 style="margin: 0;">🧾 Bill Generated!</h2>
+          <div style="color: #888; font-size: 12px;">
+            <strong id="modalGuestName">Guest</strong> · Bill #<strong id="modalBillNo">0</strong>
+          </div>
+        </div>
+        <div style="border-top: 1px dashed #999; border-bottom: 1px dashed #999; padding: 12px 0; margin: 12px 0;">
+          <div id="modalItems" style="font-size: 13px;"></div>
+        </div>
+        <div style="font-size: 13px; margin: 12px 0;">
+          <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+            <span>Subtotal</span><span id="modalSubtotal">₹0</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+            <span>GST (5%)</span><span id="modalGst">₹0</span>
+          </div>
+          <div id="discountRow" style="display: none; color: #16a34a; padding: 4px 0;">
+            <div style="display: flex; justify-content: space-between;">
+              <span>Discount</span><span id="modalDiscount">-₹0</span>
+            </div>
+          </div>
+          <div style="border-top: 1px dashed #999; margin: 8px 0; padding-top: 8px; display: flex; justify-content: space-between; font-weight: bold; font-size: 16px;">
+            <span>Total</span><span id="modalTotal">₹0</span>
+          </div>
+        </div>
         <button class="close-btn" onclick="closeModal()">Close</button>
       </div>
     </div>
@@ -881,35 +884,34 @@
 
                                   if (res.ok && data.customer) {
                                     currentGuest = data.customer;
-                                    document.getElementById('guestModalBg').classList.remove('show');
-                                    showGuestInfo();
-                                    document.getElementById('micBtn').focus();
                                   } else {
-                                    alert(data.message || 'Customer not found. Proceeding as guest.');
                                     currentGuest = { name, mobile_number: mobile, points: 0, id: null };
-                                    document.getElementById('guestModalBg').classList.remove('show');
-                                    showGuestInfo();
                                   }
                                 } catch (err) {
                                   console.error('Error fetching customer:', err);
-                                  alert('Error fetching customer details. Proceeding as guest.');
                                   currentGuest = { name, mobile_number: mobile, points: 0, id: null };
-                                  document.getElementById('guestModalBg').classList.remove('show');
-                                  showGuestInfo();
                                 }
+
+                                document.getElementById('guestModalBg').classList.remove('show');
+
+                                // Continue billing flow after guest details are entered
+                                proceedAfterGuestAndPoints();
                               }
 
                               function skipGuestEntry() {
                                 currentGuest = { name: 'Guest', mobile_number: '', points: 0, id: null };
                                 document.getElementById('guestModalBg').classList.remove('show');
-                                showGuestInfo();
+                                proceedAfterGuestAndPoints();
                               }
 
-                              function showGuestInfo() {
-                                const guestDisplay = document.getElementById('guestInfoDisplay');
-                                document.getElementById('displayGuestName').textContent = currentGuest.name || 'Guest';
-                                document.getElementById('displayGuestPoints').textContent = (currentGuest.points || 0) + ' pts';
-                                guestDisplay.classList.add('show');
+                              function proceedAfterGuestAndPoints() {
+                                const hasPoints = (currentGuest?.points || 0) > 0;
+                                if (hasPoints) {
+                                  document.getElementById('pointsValue').textContent = currentGuest.points;
+                                  document.getElementById('redeemModalBg').classList.add('show');
+                                } else {
+                                  proceedWithBillGeneration(currentGuest.name || 'Guest');
+                                }
                               }
 
                               // ── Voice Recognition ──────────────────────
@@ -1410,15 +1412,40 @@
 
                               function showModal(data) {
                                 stopVoiceReloadInterval();
-                                document.getElementById('modalMeta').textContent = `{{ table.name }} · ${data.customer_name} · Bill #${data.bill_id}`;
+                                
+                                // Guest info
+                                document.getElementById('modalGuestName').textContent = data.customer_name || 'Guest';
+                                document.getElementById('modalBillNo').textContent = data.bill_id;
+                                
+                                // Items
                                 document.getElementById('modalItems').innerHTML = data.items.map(i =>
-                                  `<div class="m-row"><span>${i.qty}× ${i.name}</span><span>₹${i.subtotal}</span></div>`
-                                ).join('') +
-                                `<div class="m-row"><span>GST (5%)</span><span>₹${data.gst_amount}</span></div>`;
-                                document.getElementById('modalTotal').innerHTML = `<span>Total</span><span>₹${data.total}</span>`;
+                                  `<div style="display: flex; justify-content: space-between; padding: 4px 0;">
+                                    <span>${i.qty}× ${i.name}</span>
+                                    <span>₹${i.subtotal}</span>
+                                  </div>`
+                                ).join('');
+
+                                // Totals
+                                const subtotal = parseFloat(data.subtotal);
+                                const gst = parseFloat(data.gst_amount);
+                                const discount = parseFloat(data.discount_amount) || 0;
+                                const finalTotal = subtotal + gst - discount;
+                                
+                                document.getElementById('modalSubtotal').textContent = '₹' + subtotal.toFixed(2);
+                                document.getElementById('modalGst').textContent = '₹' + gst.toFixed(2);
+                                
+                                // Show discount if applied
+                                const discountRow = document.getElementById('discountRow');
+                                if (discount && discount > 0) {
+                                  discountRow.style.display = 'block';
+                                  document.getElementById('modalDiscount').textContent = '-₹' + discount.toFixed(2);
+                                } else {
+                                  discountRow.style.display = 'none';
+                                }
+                                
+                                document.getElementById('modalTotal').textContent = '₹' + finalTotal.toFixed(2);
 
                                 document.getElementById('modalBg').classList.add('show');
-                                // Keep modal open until user explicitly closes it.
                               }
 
                               function closeModal() {

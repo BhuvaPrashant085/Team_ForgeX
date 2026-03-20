@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from billing.models import MenuItem, Table
+from billing.models import MenuItem, Table, Customer
 
 
 class Command(BaseCommand):
@@ -10,6 +10,20 @@ class Command(BaseCommand):
         for i in range(1, 11):
             Table.objects.get_or_create(name=f'Table {i}')
         self.stdout.write(self.style.SUCCESS('Created 10 tables'))
+
+        # Create test customers with points
+        customers_data = [
+            ('Ravi', '9876543210', 100),
+            ('Priya', '9876543211', 50),
+            ('Amit', '9876543212', 75),
+            ('Sneha', '9876543213', 120),
+        ]
+        for name, mobile, points in customers_data:
+            Customer.objects.get_or_create(
+                mobile=mobile,
+                defaults={'name': name, 'points': points}
+            )
+        self.stdout.write(self.style.SUCCESS('Created test customers with points'))
 
         # Seed menu
         menu_data = [
