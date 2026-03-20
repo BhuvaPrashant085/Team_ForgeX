@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Voice Billing — Dashboard</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: system-ui, sans-serif;
+        background: #f5f4f0;
+        color: #1a1a18;
+      }
+
+      header {
+        background: #fff;
+        border-bottom: 1px solid #e0dfd8;
+        padding: 14px 24px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      header h1 {
+        font-size: 18px;
+        font-weight: 600;
+      }
+      header span {
+        font-size: 13px;
+        color: #888;
+      }
+      .stats {
+        display: flex;
+        gap: 12px;
+        padding: 20px 24px 0;
+      }
+      .stat {
+        background: #fff;
+        border: 1px solid #e0dfd8;
+        border-radius: 10px;
+        padding: 14px 20px;
+        flex: 1;
+      }
+      .stat .num {
+        font-size: 28px;
+        font-weight: 600;
+      }
+      .stat .lbl {
+        font-size: 12px;
+        color: #888;
+        margin-top: 2px;
+      }
+      .section-title {
+        padding: 20px 24px 10px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #555;
+      }
+      .table-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 12px;
+        padding: 0 24px 24px;
+      }
+      .table-card {
+        background: #fff;
+        border: 1.5px solid #e0dfd8;
+        border-radius: 12px;
+        padding: 16px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.15s;
+        text-decoration: none;
+        color: inherit;
+      }
+      .table-card:hover {
+        border-color: #3b82f6;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.12);
+      }
+      .table-card.occupied {
+        background: #fffbeb;
+        border-color: #f59e0b;
+      }
+      .table-card.pending {
+        background: #e3f2fd;
+        border-color: #2196f3;
+      }
+      .table-card .tname {
+        font-size: 15px;
+        font-weight: 600;
+        margin-bottom: 4px;
+      }
+      .table-card .tstatus {
+        font-size: 11px;
+        padding: 2px 10px;
+        border-radius: 20px;
+        display: inline-block;
+        margin-top: 4px;
+      }
+      .free-badge {
+        background: #dcfce7;
+        color: #16a34a;
+      }
+      .occ-badge {
+        background: #fef3c7;
+        color: #d97706;
+      }
+      .pending-badge {
+        background: #bbdefb;
+        color: #1565c0;
+      }
+      .mic-icon {
+        font-size: 28px;
+        margin-bottom: 6px;
+      }
+      .voice-indicator {
+        font-size: 12px;
+        color: #666;
+        background: #f3f4f6;
+        border: 1px solid #e5e7eb;
+        border-radius: 999px;
+        padding: 6px 10px;
+      }
+      .voice-indicator.listening {
+        background: #ecfdf5;
+        color: #166534;
+        border-color: #86efac;
+      }
+      .voice-indicator.error {
+        background: #fef2f2;
+        color: #b91c1c;
+        border-color: #fecaca;
+      }
+      .table-card.voice-match {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+      }
+
+      /* Paid Bills Section */
+      .paid-bills-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 12px;
+        padding: 0 24px 24px;
+      }
+      .paid-bill-card {
+        background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
+        border: 2px solid #3b82f6;
+        border-radius: 12px;
+        padding: 14px;
+        cursor: pointer;
+        transition: all 0.15s;
+        text-decoration: none;
+        color: inherit;
+      }
+      .paid-bill-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 20px rgba(59, 130, 246, 0.25);
+      }
+      .paid-bill-card .bill-number {
+        font-size: 12px;
+        color: #1e40af;
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+      .paid-bill-card .bill-table {
+        font-size: 14px;
+        font-weight: 600;
+        color: #1e3a8a;
+        margin-bottom: 4px;
+      }
+      .paid-bill-card .bill-name {
+        font-size: 12px;
+        color: #3b82f6;
+        margin-bottom: 6px;
+      }
+      .paid-bill-card .bill-total {
+        font-size: 16px;
+        font-weight: 700;
+        color: #1e40af;
+        margin-bottom: 6px;
+      }
+      .paid-bill-card .bill-payment {
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 12px;
+        background: #fff;
+        color: #0c4a6e;
+        border: 1px solid #0284c7;
+        display: inline-block;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <span style="font-size: 22px">🎙</span>
+      <h1>Voice Billing System</h1>
+      <span>Restaurant POS</span>
+      <span id="voiceIndicator" class="voice-indicator">Mic: starting...</span>
+      <a
+        href="/admin-dashboard/"
+        style="
+          margin-left: auto;
+          font-size: 12px;
+          color: #3b82f6;
+          text-decoration: none;
+        "
+        >Admin Panel →</a
+      >
+    </header>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="num">{{ tables.count }}</div>
+        <div class="lbl">Total Tables</div>
+      </div>
+      <div class="stat">
+        <div class="num" style="color: #d97706">{{ open_bills }}</div>
+        <div class="lbl">Open Bills</div>
+      </div>
+      <div class="stat">
+        <div class="num" style="color: #2196f3">{{ pending_bills.count }}</div>
+        <div class="lbl">Pending Payments</div>
+      </div>
+      <div class="stat">
+        <div class="num" style="color: #3b82f6">{{ paid_bills.count }}</div>
+        <div class="lbl">Paid Bills</div>
+      </div>
+      <div class="stat">
+        <div class="num" style="color: #16a34a">{{ total_menu }}</div>
+        <div class="lbl">Menu Items</div>        <a href="{% url 'admin_dashboard' %}" class="btn btn-warning btn-sm mt-2">
+            <i class="fas fa-cog"></i> Manage
+        </a>      </div>
+    </div>
+
+    <div class="section-title">Select a Table to Start Billing</div>
+
+    <div class="table-grid">
+      {% for table in tables %}
+      <a
+        href="{% url 'billing' table.id %}"
+        class="table-card js-table-card {% if table.id in pending_table_ids %}pending{% elif table.status == 'occupied' %}occupied{% endif %}"
+        data-table-id="{{ table.id }}"
+      >
+        <div class="mic-icon">
+          {% if table.id in pending_table_ids %} 📋 {% elif table.status ==
+          'occupied' %} 🍽️ {% else %} 🪑 {% endif %}
+        </div>
+        <div class="tname">{{ table.name }}</div>
+        <span
+          class="tstatus {% if table.id in pending_table_ids %}pending-badge{% elif table.status == 'occupied' %}occ-badge{% else %}free-badge{% endif %}"
+        >
+          {% if table.id in pending_table_ids %} Pending {% elif table.status ==
+          'occupied' %} Occupied {% else %} Free {% endif %}
+        </span>
+      </a>
+      {% endfor %}
+    </div>
+
+    {% if paid_bills %}
+    <div class="section-title">💳 Recently Paid Bills</div>
+
+    <div class="paid-bills-grid">
+      {% for bill in paid_bills %}
+      <div class="paid-bill-card">
+        <div class="bill-number">Bill #{{ bill.id }}</div>
+        <div class="bill-table">{{ bill.table.name }}</div>
+        <div class="bill-name">{{ bill.customer_name }}</div>
+        <div class="bill-total">₹{{ bill.total }}</div>
+        <span class="bill-payment">
+          {{ bill.payment_method|default:'Not Set'|capfirst }}
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %} {% if pending_bills %}
+    <div class="section-title">⏳ Pending Payments</div>
+
+    <div class="paid-bills-grid">
+      {% for bill in pending_bills %}
+      <div
+        class="paid-bill-card"
+        style="
+          background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+          border-color: #2196f3;
+        "
+      >
+        <div class="bill-number">Bill #{{ bill.id }}</div>
+        <div class="bill-table">{{ bill.table.name }}</div>
+        <div class="bill-name">{{ bill.customer_name }}</div>
+        <div class="bill-total">₹{{ bill.total }}</div>
+        <span
+          class="bill-payment"
+          style="background: #bbdefb; border: 1px solid #2196f3; color: #1565c0"
+        >
+          Status: Pending
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <script>
+      const TABLE_WORD_TO_NUM = {
+        one: 1,
+        two: 2,
+        three: 3,
+        four: 4,
+        five: 5,
+        six: 6,
+        seven: 7,
+        eight: 8,
+        nine: 9,
+        ten: 10,
+        1: 1,
+        2: 2,
+        3: 3,
+        4: 4,
+        5: 5,
+        6: 6,
+        7: 7,
+        8: 8,
+        9: 9,
+        10: 10,
+      };
+
+      const indicatorEl = document.getElementById("voiceIndicator");
+      const tableCards = Array.from(
+        document.querySelectorAll(".js-table-card"),
+      ).map((card) => {
+        const name = (card.querySelector(".tname")?.textContent || "").trim();
+        const match = name.toLowerCase().match(/(\d+)/);
+        return {
+          card,
+          name,
+          normalizedName: normalizeText(name),
+          number: match ? parseInt(match[1], 10) : null,
+        };
+      });
+
+      const SpeechRecognition =
+        window.SpeechRecognition || window.webkitSpeechRecognition;
+      let recognition = null;
+      let keepListening = false;
+
+      if (SpeechRecognition) {
+        recognition = new SpeechRecognition();
+        recognition.lang = "en-IN";
+        recognition.interimResults = true;
+        recognition.continuous = true;
+
+        recognition.onstart = () =>
+          setIndicator("listening", 'Mic: on (say "order for table one")');
+
+        recognition.onresult = (event) => {
+          const transcript = Array.from(event.results)
+            .map((result) => result[0].transcript)
+            .join(" ")
+            .toLowerCase()
+            .trim();
+
+          const last = event.results[event.results.length - 1];
+          if (last && last.isFinal) {
+            handleVoiceCommand(transcript);
+          }
+        };
+
+        recognition.onend = () => {
+          if (keepListening) {
+            setTimeout(startRecognition, 250);
+          } else {
+            setIndicator("", "Mic: off");
+          }
+        };
+
+        recognition.onerror = (event) => {
+          // Permission denial cannot recover automatically until user changes browser setting.
+          if (
+            event.error === "not-allowed" ||
+            event.error === "service-not-allowed"
+          ) {
+            keepListening = false;
+            setIndicator("error", "Mic blocked in browser permissions");
+            return;
+          }
+
+          if (event.error === "no-speech") {
+            setIndicator("listening", "Mic: on (waiting for command)");
+            return;
+          }
+
+          setIndicator("error", "Mic error: " + event.error);
+        };
+
+        keepListening = true;
+        startRecognition();
+      } else {
+        setIndicator(
+          "error",
+          "Speech recognition is not supported in this browser",
+        );
+      }
+
+      function startRecognition() {
+        if (!recognition) return;
+        try {
+          recognition.start();
+        } catch (error) {
+          if (error && error.name !== "InvalidStateError") {
+            setIndicator("error", "Mic start failed");
+          }
+        }
+      }
+
+      function setIndicator(type, message) {
+        indicatorEl.className = "voice-indicator" + (type ? " " + type : "");
+        indicatorEl.textContent = message;
+      }
+
+      function normalizeText(text) {
+        return (text || "")
+          .toLowerCase()
+          .replace(/[^a-z0-9\s]/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+      }
+
+      function extractTableNumber(text) {
+        const normalized = normalizeText(text);
+        const match = normalized.match(/table\s+(?:number\s+)?(\w+)/);
+        if (!match) return null;
+
+        const token = match[1];
+        if (/^\d+$/.test(token)) return parseInt(token, 10);
+        return TABLE_WORD_TO_NUM[token] || null;
+      }
+
+      function handleVoiceCommand(rawTranscript) {
+        const normalized = normalizeText(rawTranscript);
+        if (!normalized) return;
+
+        const compact = normalized.replace(/\s+/g, "");
+
+        const reloadCommands = [
+          "reload",
+          "reload page",
+          "reload the page",
+          "refresh",
+          "refresh page",
+          "refresh the page",
+        ];
+        const shouldReload =
+          reloadCommands.some((cmd) => normalized.includes(cmd)) ||
+          ["reload", "reloadpage", "refresh", "refreshpage"].includes(compact);
+        if (shouldReload) {
+          setIndicator("listening", "Reloading page...");
+          window.location.reload();
+          return;
+        }
+
+        const adminCommands = [
+          "go to admin",
+          "go admin",
+          "admin",
+          "admin panel",
+          "go to admin panel",
+          "go to amdmin",
+          "amdmin",
+        ];
+        const shouldOpenAdmin =
+          adminCommands.some((cmd) => normalized.includes(cmd)) ||
+          [
+            "gotoadmin",
+            "adminpanel",
+            "gotoadminpanel",
+            "amdmin",
+            "gotoamdmin",
+          ].includes(compact);
+        if (shouldOpenAdmin) {
+          setIndicator("listening", "Opening admin panel...");
+          setTimeout(() => {
+            window.location.href = "/admin-dashboard/";
+          }, 120);
+          return;
+        }
+
+        const tableNumber = extractTableNumber(normalized);
+        let target = null;
+
+        if (tableNumber !== null) {
+          target = tableCards.find((table) => table.number === tableNumber);
+        }
+
+        if (!target) {
+          target = tableCards.find((table) =>
+            normalized.includes(table.normalizedName),
+          );
+        }
+
+        if (!target) {
+          setIndicator("listening", "Mic: on (table not found)");
+          return;
+        }
+
+        setIndicator("listening", "Opening " + target.name + "...");
+        target.card.classList.add("voice-match");
+        setTimeout(() => {
+          window.location.href = target.card.href;
+        }, 120);
+      }
+    </script>
+  </body>
+</html>

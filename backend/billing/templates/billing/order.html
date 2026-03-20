@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ table.name }} — Voice Billing</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #f5f4f0; color: #1a1a18; height: 100vh; display: flex; flex-direction: column; }
+  header { background: #fff; border-bottom: 1px solid #e0dfd8; padding: 12px 20px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  header h1 { font-size: 16px; font-weight: 600; }
+  .back { text-decoration: none; color: #3b82f6; font-size: 13px; }
+  .badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .main { display: flex; gap: 0; flex: 1; overflow: hidden; }
+
+  .left { width: 55%; padding: 16px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+  .right { width: 45%; background: #fff; border-left: 1px solid #e0dfd8; padding: 16px; display: flex; flex-direction: column; }
+
+  .card { background: #fff; border: 1px solid #e0dfd8; border-radius: 12px; padding: 14px 16px; }
+  .card-title { font-size: 13px; font-weight: 600; color: #555; margin-bottom: 10px; }
+
+  .mic-wrap { text-align: center; padding: 8px 0; }
+  .mic-btn { width: 72px; height: 72px; border-radius: 50%; background: #eff6ff; border: 2px solid #bfdbfe; cursor: pointer; font-size: 30px; transition: all .15s; display: inline-flex; align-items: center; justify-content: center; }
+  .mic-btn:hover { background: #dbeafe; }
+  .mic-btn.listening { background: #fee2e2; border-color: #fca5a5; animation: pulse 1s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.25)} 50%{box-shadow:0 0 0 10px rgba(220,38,38,0)} }
+  .mic-hint { font-size: 12px; color: #888; margin-top: 6px; }
+
+  #transcript-box { min-height: 44px; background: #f9f8f5; border: 1px solid #e0dfd8; border-radius: 8px; padding: 10px 12px; font-size: 14px; color: #444; margin-top: 10px; }
+
+  .voice-status { text-align: center; margin-top: 8px; font-size: 13px; font-weight: 500; min-height: 22px; }
+  .voice-status.waiting  { color: #888; }
+  .voice-status.detected { color: #16a34a; }
+  .voice-status.adding   { color: #3b82f6; }
+
+  .detected-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; margin-bottom: 6px; font-size: 13px; }
+  .detected-item .iname  { flex: 1; font-weight: 500; }
+  .detected-item .iprice { color: #16a34a; font-weight: 600; }
+  .add-btn     { padding: 4px 12px; background: #3b82f6; color: #fff; border: none; border-radius: 6px; font-size: 12px; cursor: pointer; }
+  .add-btn:hover { background: #2563eb; }
+  .add-all-btn { padding: 4px 14px; background: #16a34a; color: #fff; border: none; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 600; }
+  .add-all-btn:hover { background: #15803d; }
+
+  .bill-items { flex: 1; overflow-y: auto; }
+  .bill-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid #f0efe8; font-size: 13px; }
+  .bill-row .bname  { flex: 1; }
+  .bill-row .bprice { font-weight: 500; min-width: 60px; text-align: right; }
+  .remove-btn { background: none; border: none; color: #f87171; cursor: pointer; font-size: 16px; line-height: 1; }
+  .totals { border-top: 1px solid #e0dfd8; padding-top: 10px; margin-top: 8px; font-size: 13px; }
+  .total-row { display: flex; justify-content: space-between; padding: 3px 0; }
+  .total-row.grand { font-size: 16px; font-weight: 700; padding-top: 6px; border-top: 1px solid #e0dfd8; margin-top: 4px; }
+  .gen-btn { margin-top: 12px; width: 100%; padding: 12px; background: #16a34a; color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; }
+  .gen-btn:hover { background: #15803d; }
+  .gen-btn:disabled { background: #86efac; cursor: not-allowed; }
+
+  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 100; align-items: center; justify-content: center; }
+  .modal-bg.show { display: flex; }
+  .modal { background: #fff; border-radius: 16px; padding: 24px; width: 340px; font-size: 14px; }
+  .modal h2 { text-align: center; margin-bottom: 16px; }
+  .modal .m-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0efe8; font-size: 13px; }
+  .modal .m-total { font-size: 16px; font-weight: 700; margin-top: 8px; display: flex; justify-content: space-between; }
+  .close-btn { margin-top: 16px; width: 100%; padding: 10px; background: #3b82f6; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; }
+  .empty-state { text-align: center; color: #bbb; font-size: 13px; padding: 20px 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <a href="/" class="back">← Back</a>
+  <h1>{{ table.name }}</h1>
+  <span class="badge" style="background:#fef3c7;color:#d97706">Bill #{{ bill.id }}</span>
+  <span style="margin-left:auto;font-size:12px;color:#888">Speak to add items</span>
+</header>
+
+<div class="main">
+
+  <!-- LEFT: Voice + Detected + Menu -->
+  <div class="left">
+
+    <div class="card">
+      <div class="card-title">🎙 Voice Order</div>
+      <div class="mic-wrap">
+        <button class="mic-btn" id="micBtn" onclick="toggleMic()">🎙</button>
+        <div class="mic-hint" id="micHint">Tap to start speaking</div>
+      </div>
+
+      <!-- Step guide -->
+      <div style="display:flex;justify-content:center;gap:6px;margin-top:10px;flex-wrap:wrap">
+        <span style="background:#eff6ff;color:#3b82f6;padding:2px 10px;border-radius:10px;font-size:11px">1. Say item name</span>
+        <span style="color:#aaa;font-size:11px;line-height:20px">→</span>
+        <span style="background:#f0fdf4;color:#16a34a;padding:2px 10px;border-radius:10px;font-size:11px">2. Say "add"</span>
+        <span style="color:#aaa;font-size:11px;line-height:20px">→</span>
+        <span style="background:#fef9c3;color:#854d0e;padding:2px 10px;border-radius:10px;font-size:11px">3. Added!</span>
+      </div>
+
+      <div id="transcript-box">Transcript will appear here...</div>
+      <div class="voice-status waiting" id="voiceStatus"></div>
+    </div>
+
+    <!-- Detected items (shown after voice search) -->
+    <div class="card" id="detectedCard" style="display:none">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>✅ Detected Items</span>
+        <button class="add-all-btn" id="addAllBtn" onclick="addAllDetected()">Add All →</button>
+      </div>
+      <div id="detectedList"></div>
+      <div style="font-size:11px;color:#888;margin-top:8px;text-align:center">
+        Say <b>"add"</b> to add all items, or tap individual Add buttons
+      </div>
+    </div>
+
+    <!-- Full menu grid -->
+    <div class="card">
+      <div class="card-title">📋 Full Menu <span style="font-weight:400;color:#aaa">(tap to add)</span></div>
+      <div id="menuList" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:260px;overflow-y:auto"></div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT: Bill panel -->
+  <div class="right">
+    <div style="font-size:14px;font-weight:600;margin-bottom:12px">
+      🧾 Current Bill
+      <span style="font-size:12px;font-weight:400;color:#888;margin-left:6px">{{ table.name }}</span>
+    </div>
+
+    <div class="bill-items" id="billItems">
+      <div class="empty-state" id="emptyState">No items yet.<br>Use the mic to add items.</div>
+    </div>
+
+    <div class="totals" id="totalsSection" style="display:none">
+      <div class="total-row"><span>Subtotal</span><span id="subtotal">₹0</span></div>
+      <div class="total-row"><span>GST (5%)</span><span id="gst">₹0</span></div>
+      <div class="total-row grand"><span>Total</span><span id="total">₹0</span></div>
+    </div>
+
+    <button class="gen-btn" id="genBtn" onclick="generateBill()" disabled>Generate Bill</button>
+  </div>
+</div>
+
+<!-- Generated Bill Modal -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h2>🧾 Bill Generated!</h2>
+    <div style="text-align:center;color:#888;font-size:12px;margin-bottom:12px" id="modalMeta"></div>
+    <div id="modalItems"></div>
+    <div class="m-total" id="modalTotal"></div>
+    <button class="close-btn" onclick="window.location='/'">Close & Go Home</button>
+  </div>
+</div>
+
+<script>
+const BILL_ID = {{ bill.id }};
+const CSRF = '{{ csrf_token }}';
+
+// ── Number word map ────────────────────────────
+const NUM_MAP = {
+  one:1, two:2, three:3, four:4, five:5,
+  six:6, seven:7, eight:8, nine:9, ten:10,
+  ek:1, do:2, teen:3, char:4, paanch:5,
+  '1':1,'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'10':10
+};
+
+// ── Voice Recognition setup ────────────────────
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition = null;
+let listening = false;
+let lastDetectedItems = [];   // holds items from last voice search
+
+if (SpeechRecognition) {
+  recognition = new SpeechRecognition();
+  recognition.lang = 'en-IN';
+  recognition.interimResults = true;
+  recognition.continuous = false;
+
+  recognition.onresult = (e) => {
+    const transcript = Array.from(e.results)
+      .map(r => r[0].transcript)
+      .join('').toLowerCase().trim();
+
+    document.getElementById('transcript-box').textContent = '"' + transcript + '"';
+
+    if (e.results[e.results.length - 1].isFinal) {
+
+      // ── Step 2: "add" command ──
+      if (['add', 'add all', 'add item', 'add items'].includes(transcript)) {
+        if (lastDetectedItems.length > 0) {
+          setStatus('adding', '➕ Adding items to bill...');
+          addAllDetected();
+        } else {
+          setStatus('waiting', 'No items detected yet. Say an item name first.');
+        }
+        return;
+      }
+
+      // ── Step 1: search for items ──
+      processVoiceText(transcript);
+    }
+  };
+
+  recognition.onend = () => stopListening();
+  recognition.onerror = (e) => {
+    stopListening();
+    if (e.error !== 'no-speech') alert('Mic error: ' + e.error);
+  };
+
+} else {
+  document.getElementById('micBtn').textContent = '🚫';
+  document.getElementById('micHint').textContent = 'Not supported. Please use Chrome or Edge.';
+}
+
+// ── Mic controls ───────────────────────────────
+function toggleMic() {
+  if (listening) stopListening();
+  else startListening();
+}
+
+function startListening() {
+  if (!recognition) return;
+  listening = true;
+  recognition.start();
+  document.getElementById('micBtn').classList.add('listening');
+  document.getElementById('micBtn').textContent = '⏹';
+  document.getElementById('micHint').textContent = 'Listening... speak now';
+  document.getElementById('transcript-box').textContent = '...';
+  setStatus('waiting', '');
+}
+
+function stopListening() {
+  listening = false;
+  if (recognition) try { recognition.stop(); } catch(e) {}
+  document.getElementById('micBtn').classList.remove('listening');
+  document.getElementById('micBtn').textContent = '🎙';
+  document.getElementById('micHint').textContent = 'Tap to start speaking';
+}
+
+function setStatus(type, msg) {
+  const el = document.getElementById('voiceStatus');
+  el.className = 'voice-status ' + type;
+  el.textContent = msg;
+}
+
+// ── Step 1: Search menu from voice transcript ──
+async function processVoiceText(text) {
+  setStatus('waiting', '🔍 Searching menu...');
+  try {
+    const res = await fetch('/api/menu/search/?q=' + encodeURIComponent(text));
+    const data = await res.json();
+
+    if (!data.results || !data.results.length) {
+      setStatus('waiting', '❌ No items found. Try again.');
+      document.getElementById('detectedCard').style.display = 'none';
+      return;
+    }
+
+    lastDetectedItems = data.results.map(item => {
+      const qty = detectQty(text, item.item_name || item.name);
+      const price = parseFloat(item.price);
+      return {
+        item_id: item.id,
+        name: item.item_name || item.name,
+        qty: qty,
+        price: price,
+        subtotal: price * qty
+      };
+    });
+
+    renderDetected();
+    setStatus('detected', '✅ Items found! Now say "add" or tap Add.');
+
+  } catch(err) {
+    setStatus('waiting', '⚠️ Error searching. Try again.');
+  }
+}
+
+// ── Detect quantity near item name in transcript ──
+function detectQty(text, itemName) {
+  const words = text.toLowerCase().split(/\s+/);
+  const firstWord = (itemName || '').toLowerCase().split(' ')[0].slice(0, 4);
+  for (let i = 0; i < words.length; i++) {
+    if (words[i].startsWith(firstWord)) {
+      if (i > 0 && NUM_MAP[words[i - 1]]) return NUM_MAP[words[i - 1]];
+      if (i > 1 && NUM_MAP[words[i - 2]]) return NUM_MAP[words[i - 2]];
+    }
+  }
+  return 1;
+}
+
+// ── Render detected items card ─────────────────
+function renderDetected() {
+  const card = document.getElementById('detectedCard');
+  const list = document.getElementById('detectedList');
+  if (!lastDetectedItems.length) { card.style.display = 'none'; return; }
+
+  card.style.display = 'block';
+  list.innerHTML = lastDetectedItems.map((item, i) => `
+    <div class="detected-item">
+      <span class="iname">${item.qty}× ${item.name}</span>
+      <span class="iprice">₹${item.subtotal}</span>
+      <input type="number" value="${item.qty}" min="1"
+        onchange="updateDetectedQty(${i}, this.value)"
+        style="width:44px;padding:3px;border:1px solid #ddd;border-radius:6px;text-align:center;font-size:12px">
+      <button class="add-btn" onclick="addOneDetected(${i})">Add</button>
+    </div>
+  `).join('');
+}
+
+function updateDetectedQty(idx, val) {
+  lastDetectedItems[idx].qty = parseInt(val) || 1;
+  lastDetectedItems[idx].subtotal = lastDetectedItems[idx].price * lastDetectedItems[idx].qty;
+  renderDetected();
+}
+
+// ── Add ALL detected items (voice "add" command) ──
+async function addAllDetected() {
+  if (!lastDetectedItems.length) return;
+  await postItems(lastDetectedItems);
+  lastDetectedItems = [];
+  document.getElementById('detectedCard').style.display = 'none';
+  setStatus('detected', '✅ All items added to bill!');
+  setTimeout(() => setStatus('waiting', ''), 2000);
+}
+
+// ── Add ONE detected item ──────────────────────
+async function addOneDetected(idx) {
+  await postItems([lastDetectedItems[idx]]);
+  lastDetectedItems.splice(idx, 1);
+  renderDetected();
+  if (!lastDetectedItems.length) document.getElementById('detectedCard').style.display = 'none';
+  setStatus('detected', '✅ Item added!');
+  setTimeout(() => setStatus('waiting', ''), 1500);
+}
+
+// ── POST items to bill API ─────────────────────
+async function postItems(items) {
+  const res = await fetch(`/api/bill/${BILL_ID}/add-items/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+    body: JSON.stringify({ items })
+  });
+  const data = await res.json();
+  renderBill(data);
+}
+
+// ── Render bill panel ──────────────────────────
+function renderBill(data) {
+  const container = document.getElementById('billItems');
+  const emptyState = document.getElementById('emptyState');
+  const totals = document.getElementById('totalsSection');
+  const genBtn = document.getElementById('genBtn');
+
+  if (!data.items || !data.items.length) {
+    container.innerHTML = '';
+    container.appendChild(emptyState);
+    emptyState.style.display = 'block';
+    totals.style.display = 'none';
+    genBtn.disabled = true;
+    return;
+  }
+
+  emptyState.style.display = 'none';
+  totals.style.display = 'block';
+  genBtn.disabled = false;
+
+  container.innerHTML = data.items.map(item => `
+    <div class="bill-row">
+      <span class="bname">${item.qty}× ${item.name}</span>
+      <span class="bprice">₹${item.subtotal}</span>
+      <button class="remove-btn" onclick="removeItem(${item.item_id})" title="Remove">×</button>
+    </div>
+  `).join('');
+
+  document.getElementById('subtotal').textContent = '₹' + data.subtotal;
+  document.getElementById('gst').textContent      = '₹' + data.gst_amount;
+  document.getElementById('total').textContent    = '₹' + data.total;
+}
+
+// ── Remove item ────────────────────────────────
+async function removeItem(itemId) {
+  const res = await fetch(`/api/bill/${BILL_ID}/remove-item/${itemId}/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': CSRF }
+  });
+  const data = await res.json();
+  renderBill(data);
+}
+
+// ── Generate bill ──────────────────────────────
+async function generateBill() {
+  const name = prompt('Customer name (leave blank for Guest):') || 'Guest';
+  const res = await fetch(`/api/bill/${BILL_ID}/generate/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+    body: JSON.stringify({ customer_name: name })
+  });
+  const data = await res.json();
+  showModal(data);
+}
+
+function showModal(data) {
+  document.getElementById('modalMeta').textContent =
+    `{{ table.name }} · ${data.customer_name} · Bill #${data.bill_id}`;
+  document.getElementById('modalItems').innerHTML =
+    data.items.map(i =>
+      `<div class="m-row"><span>${i.qty}× ${i.name}</span><span>₹${i.subtotal}</span></div>`
+    ).join('') +
+    `<div class="m-row"><span>GST (5%)</span><span>₹${data.gst_amount}</span></div>`;
+  document.getElementById('modalTotal').innerHTML =
+    `<span>Total</span><span>₹${data.total}</span>`;
+  document.getElementById('modalBg').classList.add('show');
+}
+
+// ── Load full menu grid ────────────────────────
+async function loadMenu() {
+  const res = await fetch('/api/menu/');
+  const data = await res.json();
+  const el = document.getElementById('menuList');
+  el.innerHTML = data.menu.map(item => `
+    <div onclick="quickAdd(${item.id}, '${item.item_name}', ${item.price})"
+         style="padding:7px 10px;border:1px solid #e0dfd8;border-radius:8px;cursor:pointer;font-size:12px;transition:.1s;background:#fff"
+         onmouseover="this.style.borderColor='#3b82f6';this.style.background='#eff6ff'"
+         onmouseout="this.style.borderColor='#e0dfd8';this.style.background='#fff'">
+      <div style="font-weight:500">${item.item_name}</div>
+      <div style="color:#16a34a;font-weight:600">₹${item.price}</div>
+    </div>
+  `).join('');
+}
+
+async function quickAdd(id, name, price) {
+  await postItems([{ item_id: id, name, qty: 1, price: parseFloat(price), subtotal: parseFloat(price) }]);
+}
+
+// ── Init: load menu + current bill ────────────
+async function init() {
+  loadMenu();
+  const res = await fetch(`/api/bill/${BILL_ID}/`);
+  const data = await res.json();
+  renderBill(data);
+}
+
+init();
+</script>
+</body>
+</html>
