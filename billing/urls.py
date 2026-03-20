@@ -4,6 +4,7 @@ from . import views
 urlpatterns = [
     # Pages
     path('', views.dashboard, name='dashboard'),
+    path('admin-dashboard/', views.admin_dashboard, name='admin_dashboard'),
     path('table/<int:table_id>/', views.billing_view, name='billing'),
 
     # Voice API

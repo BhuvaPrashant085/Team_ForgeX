@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import MenuItem, Table, Customer, Bill
+from .models import MenuItem, Table, Customer, Bill, Staff
 
 
 @admin.register(MenuItem)
@@ -27,3 +27,11 @@ class BillAdmin(admin.ModelAdmin):
     list_display = ['id', 'table', 'customer_name', 'total', 'payment_method', 'status', 'created_at']
     list_filter = ['status', 'payment_method']
     readonly_fields = ['subtotal', 'gst_amount', 'total', 'created_at']
+
+
+@admin.register(Staff)
+class StaffAdmin(admin.ModelAdmin):
+    list_display = ['name', 'number', 'mail', 'role', 'password', 'created_at']
+    list_filter = ['role']
+    search_fields = ['name', 'mail', 'number']
+    readonly_fields = ['password']  # Password is auto-generated, so readonly

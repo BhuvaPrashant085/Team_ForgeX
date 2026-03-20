@@ -1,3 +1,6 @@
+from pyexpat.errors import messages
+import random
+
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -5,7 +8,9 @@ from django.db.models import Q
 import json
 import re
 
-from .models import MenuItem, Table, Customer, Bill
+from flask import redirect
+
+from .models import MenuItem, Staff, Table, Customer, Bill
 
 
 # ──────────────────────────────────────────────
@@ -299,3 +304,92 @@ def menu_list(request):
         'id', 'item_name', 'item_category', 'price'
     )
     return JsonResponse({'menu': list(items)})
+
+def admin_dashboard(request):
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'add_menu_item':
+            item_name = request.POST.get('item_name')
+            item_category = request.POST.get('item_category')
+            price = request.POST.get('price')
+            is_available = request.POST.get('is_available') == 'on'
+
+            MenuItem.objects.create(
+                item_name=item_name,
+                item_category=item_category,
+                price=price,
+                is_available=is_available
+            )
+            messages.success(request, f'Menu item "{item_name}" added successfully!')
+
+        elif action == 'update_menu_item':
+            item_id = request.POST.get('item_id')
+            item = get_object_or_404(MenuItem, id=item_id)
+            item.item_name = request.POST.get('item_name')
+            item.item_category = request.POST.get('item_category')
+            item.price = request.POST.get('price')
+            item.is_available = request.POST.get('is_available') == 'on'
+            item.save()
+            messages.success(request, f'Menu item "{item.item_name}" updated successfully!')
+
+        elif action == 'delete_menu_item':
+            item_id = request.POST.get('item_id')
+            item = get_object_or_404(MenuItem, id=item_id)
+            item_name = item.item_name
+            item.delete()
+            messages.success(request, f'Menu item "{item_name}" deleted successfully!')
+
+        elif action == 'add_table':
+            table_name = request.POST.get('table_name')
+            Table.objects.create(name=table_name)
+            messages.success(request, f'Table "{table_name}" added successfully!')
+
+        elif action == 'delete_table':
+            table_id = request.POST.get('table_id')
+            table = get_object_or_404(Table, id=table_id)
+            table_name = table.name
+            table.delete()
+            messages.success(request, f'Table "{table_name}" deleted successfully!')
+
+        elif action == 'add_staff':
+            name = request.POST.get('name')
+            number = request.POST.get('number')
+            mail = request.POST.get('mail')
+            role = request.POST.get('role')
+
+            # Generate unique 4-digit password
+            while True:
+                password = f"{random.randint(1000, 9999)}"
+                if not Staff.objects.filter(password=password).exists():
+                    break
+
+            Staff.objects.create(
+                name=name,
+                number=number,
+                mail=mail,
+                role=role,
+                password=password
+            )
+            messages.success(request, f'Staff member "{name}" added successfully! Password: {password}')
+
+        elif action == 'delete_staff':
+            staff_id = request.POST.get('staff_id')
+            staff = get_object_or_404(Staff, id=staff_id)
+            staff_name = staff.name
+            staff.delete()
+            messages.success(request, f'Staff member "{staff_name}" removed successfully!')
+
+        return redirect('admin_dashboard')
+
+    # GET request - display dashboard
+    menu_items = MenuItem.objects.all().order_by('item_category', 'item_name')
+    tables = Table.objects.all().order_by('name')
+    staff = Staff.objects.all().order_by('role', 'name')
+
+    context = {
+        'menu_items': menu_items,
+        'tables': tables,
+        'staff': staff,
+    }
+    return render(request, 'billing/admin_dashboard.html', context)

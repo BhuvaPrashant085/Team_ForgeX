@@ -205,7 +205,7 @@
       <span>Restaurant POS</span>
       <span id="voiceIndicator" class="voice-indicator">Mic: starting...</span>
       <a
-        href="/admin-dashboard/"
+        href="/admin/"
         style="
           margin-left: auto;
           font-size: 12px;
@@ -235,9 +235,8 @@
       </div>
       <div class="stat">
         <div class="num" style="color: #16a34a">{{ total_menu }}</div>
-        <div class="lbl">Menu Items</div>        <a href="{% url 'admin_dashboard' %}" class="btn btn-warning btn-sm mt-2">
-            <i class="fas fa-cog"></i> Manage
-        </a>      </div>
+        <div class="lbl">Menu Items</div>
+      </div>
     </div>
 
     <div class="section-title">Select a Table to Start Billing</div>
@@ -486,7 +485,7 @@
         if (shouldOpenAdmin) {
           setIndicator("listening", "Opening admin panel...");
           setTimeout(() => {
-            window.location.href = "/admin-dashboard/";
+            window.location.href = "/admin/";
           }, 120);
           return;
         }
