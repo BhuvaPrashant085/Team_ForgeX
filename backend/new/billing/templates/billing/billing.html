@@ -1,0 +1,1177 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ table.name }} — Voice Billing</title>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        font-family: system-ui, sans-serif;
+        background: #f5f4f0;
+        color: #1a1a18;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      header {
+        background: #fff;
+        border-bottom: 1px solid #e0dfd8;
+        padding: 12px 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-shrink: 0;
+      }
+      header h1 { font-size: 16px; font-weight: 600; }
+      .back { text-decoration: none; color: #3b82f6; font-size: 13px; }
+      .badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+
+      .main { display: flex; flex: 1; overflow: hidden; }
+
+      /* Left panel */
+      .left {
+        width: 55%;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        overflow-y: auto;
+      }
+      /* Right panel */
+      .right {
+        width: 45%;
+        background: #fff;
+        border-left: 1px solid #e0dfd8;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+      }
+
+      .card {
+        background: #fff;
+        border: 1px solid #e0dfd8;
+        border-radius: 12px;
+        padding: 14px 16px;
+      }
+      .card-title { font-size: 13px; font-weight: 600; color: #555; margin-bottom: 10px; }
+
+      /* Mic */
+      .mic-wrap { text-align: center; padding: 8px 0; }
+      .mic-btn {
+        width: 72px; height: 72px; border-radius: 50%;
+        background: #eff6ff; border: 2px solid #bfdbfe;
+        cursor: pointer; font-size: 30px;
+        transition: all 0.15s;
+        display: inline-flex; align-items: center; justify-content: center;
+      }
+      .mic-btn:hover { background: #dbeafe; }
+      .mic-btn.listening {
+        background: #fee2e2; border-color: #fca5a5;
+        animation: pulse 1s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,.25); }
+        50% { box-shadow: 0 0 0 10px rgba(220,38,38,0); }
+      }
+      .mic-hint { font-size: 12px; color: #888; margin-top: 6px; }
+      #transcript-box {
+        min-height: 44px; background: #f9f8f5;
+        border: 1px solid #e0dfd8; border-radius: 8px;
+        padding: 10px 12px; font-size: 14px; color: #444; margin-top: 10px;
+      }
+
+      /* Detected items */
+      .detected-item {
+        display: flex; align-items: center; gap: 8px;
+        padding: 8px 10px; background: #f0fdf4;
+        border: 1px solid #bbf7d0; border-radius: 8px;
+        margin-bottom: 6px; font-size: 13px;
+      }
+      .detected-item .iname { flex: 1; font-weight: 500; }
+      .detected-item .iprice { color: #16a34a; font-weight: 600; }
+      .add-btn {
+        padding: 4px 12px; background: #3b82f6; color: #fff;
+        border: none; border-radius: 6px; font-size: 12px; cursor: pointer;
+      }
+      .add-btn:hover { background: #2563eb; }
+
+      /* Guest info bar */
+      #guestInfoBar {
+        display: none;
+        background: #eef2ff;
+        border: 1px solid #818cf8;
+        border-radius: 10px;
+        padding: 10px 14px;
+        margin-bottom: 10px;
+        font-size: 13px;
+        color: #3730a3;
+        flex-direction: column;
+        gap: 0;
+      }
+      #guestInfoBar.show { display: flex; }
+      #guestInfoBar .g-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+      #guestInfoBar .g-name { font-weight: 700; font-size: 14px; }
+      #guestInfoBar .g-mobile { font-size: 12px; color: #6366f1; }
+      #guestInfoBar .g-pts-bar {
+        display: flex; align-items: center; gap: 10px;
+        margin-top: 8px; padding-top: 8px;
+        border-top: 1px solid #c7d2fe;
+      }
+      #guestInfoBar .g-pts-label { font-size: 12px; color: #6366f1; flex: 1; }
+      #guestInfoBar .g-pts-badge {
+        background: #fef3c7; color: #92400e;
+        border: 1px solid #fcd34d; border-radius: 20px;
+        padding: 3px 12px; font-size: 13px; font-weight: 700;
+        display: flex; align-items: center; gap: 4px;
+      }
+      #guestInfoBar .g-pts-worth {
+        font-size: 11px; color: #78350f;
+        background: #fffbeb; border: 1px solid #fde68a;
+        border-radius: 8px; padding: 2px 8px; font-weight: 600;
+      }
+      /* Bill modal guest card */
+      #billGuestCard {
+        display: none; background: #f5f3ff;
+        border: 1.5px solid #a78bfa; border-radius: 10px;
+        padding: 12px 14px; margin-bottom: 14px;
+      }
+      #billGuestCard.show { display: block; }
+      #billGuestCard .bgc-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+      #billGuestCard .bgc-avatar {
+        width: 36px; height: 36px; border-radius: 50%;
+        background: #7c3aed; color: #fff;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 14px; font-weight: 700; flex-shrink: 0;
+      }
+      #billGuestCard .bgc-name { font-weight: 700; font-size: 14px; color: #4c1d95; }
+      #billGuestCard .bgc-mobile { font-size: 12px; color: #7c3aed; }
+      #billGuestCard .bgc-pts-row {
+        display: flex; align-items: center; gap: 8px;
+        padding-top: 8px; border-top: 1px solid #ddd6fe;
+      }
+      #billGuestCard .bgc-pts-label { font-size: 12px; color: #6d28d9; flex: 1; }
+      #billGuestCard .bgc-pts-badge {
+        background: #fef3c7; color: #92400e;
+        border: 1px solid #fcd34d; border-radius: 20px;
+        padding: 3px 12px; font-size: 13px; font-weight: 700;
+      }
+      #billGuestCard .bgc-pts-worth {
+        font-size: 11px; color: #78350f;
+        background: #fffbeb; border: 1px solid #fde68a;
+        border-radius: 8px; padding: 2px 8px; font-weight: 600;
+      }
+
+      /* Bill items */
+      .bill-items { flex: 1; overflow-y: auto; }
+      .bill-row {
+        display: flex; align-items: center; gap: 8px;
+        padding: 7px 0; border-bottom: 1px solid #f0efe8; font-size: 13px;
+      }
+      .bill-row .bname { flex: 1; }
+      .bill-row .bprice { font-weight: 500; min-width: 60px; text-align: right; }
+      .remove-btn { background: none; border: none; color: #f87171; cursor: pointer; font-size: 16px; }
+
+      .totals { border-top: 1px solid #e0dfd8; padding-top: 10px; margin-top: 8px; font-size: 13px; }
+      .total-row { display: flex; justify-content: space-between; padding: 3px 0; }
+      .total-row.grand {
+        font-size: 16px; font-weight: 700; padding-top: 6px;
+        border-top: 1px solid #e0dfd8; margin-top: 4px;
+      }
+      .total-row.discount-row { color: #16a34a; font-weight: 600; }
+
+      .gen-btn {
+        margin-top: 12px; width: 100%; padding: 12px;
+        background: #16a34a; color: #fff; border: none;
+        border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer;
+      }
+      .gen-btn:hover { background: #15803d; }
+      .gen-btn:disabled { background: #86efac; cursor: not-allowed; }
+
+      /* Payment */
+      .payment-options { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+      .payment-btn {
+        width: 100%; padding: 12px 16px;
+        border: 2px solid #e0dfd8; background: #fff;
+        border-radius: 8px; cursor: pointer; font-size: 14px;
+        font-weight: 600; transition: all 0.2s;
+      }
+      .payment-btn:hover:not(:disabled) { transform: translateY(-2px); }
+      .payment-btn:disabled { opacity: .5; cursor: not-allowed; }
+      .payment-btn.cash { color: #16a34a; border-color: #86efac; }
+      .payment-btn.cash:hover:not(:disabled) { background: #f0fdf4; border-color: #22c55e; }
+      .payment-btn.online { color: #2563eb; border-color: #bfdbfe; }
+      .payment-btn.online:hover:not(:disabled) { background: #eff6ff; border-color: #3b82f6; }
+      .payment-btn.card { color: #9333ea; border-color: #e9d5ff; }
+      .payment-btn.card:hover:not(:disabled) { background: #faf5ff; border-color: #a855f7; }
+
+      /* ── MODALS ── */
+      .modal-overlay {
+        display: none; position: fixed; inset: 0;
+        background: rgba(0,0,0,.45); backdrop-filter: blur(3px);
+        z-index: 200; align-items: center; justify-content: center;
+      }
+      .modal-overlay.show { display: flex; }
+      .modal-box {
+        background: #fff; border-radius: 18px; padding: 28px 24px;
+        width: min(420px, 94vw);
+        box-shadow: 0 20px 60px rgba(0,0,0,.2);
+        font-family: system-ui, sans-serif;
+      }
+      .modal-box h2 { font-size: 19px; font-weight: 700; margin-bottom: 4px; color: #1a1a18; }
+      .modal-sub { font-size: 13px; color: #888; margin-bottom: 20px; }
+
+      .form-group { margin-bottom: 14px; }
+      .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px; color: #555; }
+      .form-group input {
+        width: 100%; padding: 10px 13px;
+        border: 1.5px solid #e0dfd8; border-radius: 9px;
+        font-size: 14px; font-family: inherit; outline: none; transition: border .2s;
+      }
+      .form-group input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.1); }
+
+      .modal-btns { display: flex; gap: 10px; margin-top: 20px; }
+      .btn-skip {
+        flex: 1; padding: 11px; border: 1.5px solid #e0dfd8;
+        background: #fff; border-radius: 9px;
+        font-size: 14px; cursor: pointer; color: #555; font-weight: 500;
+      }
+      .btn-skip:hover { background: #f9fafb; }
+      .btn-primary {
+        flex: 2; padding: 11px; background: #3b82f6; color: #fff;
+        border: none; border-radius: 9px; font-size: 14px;
+        font-weight: 600; cursor: pointer;
+      }
+      .btn-primary:hover { background: #2563eb; }
+      .btn-green {
+        flex: 2; padding: 11px; background: #16a34a; color: #fff;
+        border: none; border-radius: 9px; font-size: 14px;
+        font-weight: 600; cursor: pointer;
+      }
+      .btn-green:hover { background: #15803d; }
+
+      /* Bill preview modal */
+      .bill-items-list { border-top: 1px dashed #ccc; border-bottom: 1px dashed #ccc; padding: 12px 0; margin: 12px 0; }
+      .bill-preview-row { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; }
+      .totals-preview { font-size: 13px; }
+      .totals-preview .t-row { display: flex; justify-content: space-between; padding: 3px 0; }
+      .totals-preview .t-grand {
+        display: flex; justify-content: space-between;
+        font-size: 17px; font-weight: 700; padding-top: 8px;
+        border-top: 2px solid #e5e7eb; margin-top: 6px;
+      }
+
+      /* Discount panel */
+      .discount-panel {
+        background: #fffbeb; border: 1.5px solid #fcd34d;
+        border-radius: 11px; padding: 14px; margin: 14px 0;
+      }
+      .discount-panel p { font-size: 13px; font-weight: 600; color: #92400e; margin-bottom: 10px; }
+      .discount-row-inputs { display: flex; gap: 8px; align-items: center; }
+      .discount-row-inputs select {
+        padding: 8px 10px; border: 1.5px solid #e0dfd8;
+        border-radius: 8px; font-size: 13px; background: #fff; outline: none; cursor: pointer;
+      }
+      .discount-row-inputs input {
+        width: 90px; padding: 8px 10px;
+        border: 1.5px solid #e0dfd8; border-radius: 8px;
+        font-size: 13px; outline: none;
+      }
+
+      /* Points redeem */
+      .points-box {
+        background: #fef3c7; border: 1px solid #fcd34d;
+        border-radius: 10px; padding: 14px; text-align: center; margin-bottom: 16px;
+      }
+      .points-num { font-size: 30px; font-weight: 700; color: #d97706; }
+      .points-lbl { font-size: 12px; color: #92400e; margin-top: 2px; }
+      .points-worth { font-size: 13px; color: #78350f; margin-top: 6px; font-weight: 500; }
+
+      /* Settled confirm */
+      #paymentConfirm {
+        display: none; text-align: center; margin-top: 12px;
+        padding: 12px; background: #e3f2fd;
+        border-radius: 8px; border-left: 4px solid #2196f3;
+      }
+    </style>
+  </head>
+  <body>
+
+    <!-- ═══════════════════════════════════════════════════════
+         MODAL 1 — Guest Information (shown once per table session)
+    ═══════════════════════════════════════════════════════ -->
+    <div class="modal-overlay" id="guestModalOverlay">
+      <div class="modal-box">
+        <h2>👤 Guest Information</h2>
+        <p class="modal-sub">Collected once — remembered for this table session.</p>
+        <div class="form-group">
+          <label>Guest Name <span style="color:#ef4444">*</span></label>
+          <input type="text" id="guestNameInput" placeholder="e.g. Rahul Mehta" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label>Mobile Number <span style="color:#ef4444">*</span></label>
+          <input type="tel" id="guestMobileInput" placeholder="10-digit mobile" maxlength="10" autocomplete="off">
+        </div>
+        <div class="modal-btns">
+          <button class="btn-skip" onclick="skipGuest()">Skip</button>
+          <button class="btn-primary" onclick="saveGuest()">Fetch Details →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         MODAL 2 — Points Redemption
+    ═══════════════════════════════════════════════════════ -->
+    <div class="modal-overlay" id="pointsModalOverlay">
+      <div class="modal-box">
+        <h2>⭐ Redeem Points</h2>
+        <p class="modal-sub" id="pointsModalSub">This guest has loyalty points.</p>
+        <div class="points-box">
+          <div class="points-num" id="pointsAvailDisplay">0</div>
+          <div class="points-lbl">Points Available</div>
+          <div class="points-worth" id="pointsWorthDisplay">Worth ₹0 discount</div>
+        </div>
+        <div class="modal-btns">
+          <button class="btn-skip" onclick="skipRedemption()">Skip</button>
+          <button class="btn-primary" style="background:#d97706;" onmouseover="this.style.background='#b45309'" onmouseout="this.style.background='#d97706'" onclick="redeemAllPoints()">
+            Use All Points ✓
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         MODAL 3 — Bill Preview (items + discount + totals)
+    ═══════════════════════════════════════════════════════ -->
+    <div class="modal-overlay" id="billModalOverlay">
+      <div class="modal-box" style="max-height:90vh; overflow-y:auto;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <h2>🧾 Bill Preview</h2>
+          <button onclick="closeBillModal()" style="background:#f3f4f6; border:none; border-radius:8px; padding:5px 10px; cursor:pointer; font-size:13px; color:#555;">✕</button>
+        </div>
+        <p class="modal-sub" id="billModalSub">Guest · Bill #—</p>
+
+        <!-- Guest card inside bill preview -->
+        <div id="billGuestCard">
+          <div class="bgc-top">
+            <div class="bgc-avatar" id="billGuestAvatar">G</div>
+            <div>
+              <div class="bgc-name" id="billGuestName">Guest</div>
+              <div class="bgc-mobile" id="billGuestMobile"></div>
+            </div>
+          </div>
+          <div class="bgc-pts-row" id="billGuestPtsRow" style="display:none;">
+            <span class="bgc-pts-label">🏆 Loyalty Points</span>
+            <span class="bgc-pts-badge" id="billGuestPtsBadge">⭐ 0</span>
+            <span class="bgc-pts-worth" id="billGuestPtsWorth">= ₹0</span>
+          </div>
+        </div>
+        <div class="bill-items-list" id="modalItemsList"></div>
+
+        <!-- Discount -->
+        <div class="discount-panel">
+          <p>🏷️ Apply Discount</p>
+          <div class="discount-row-inputs">
+            <select id="discountType" onchange="recalcModal()">
+              <option value="none">No Discount</option>
+              <option value="percent">% Percentage</option>
+              <option value="fixed">₹ Fixed</option>
+            </select>
+            <input type="number" id="discountValue" min="0" placeholder="0" oninput="recalcModal()">
+            <span id="discountHint" style="font-size:12px; color:#888;"></span>
+          </div>
+          <!-- Points discount line (auto-filled if points redeemed) -->
+          <div id="pointsDiscountLine" style="display:none; margin-top:8px; font-size:13px; color:#d97706; font-weight:500;">
+            ⭐ Points discount: <span id="pointsDiscountAmt">₹0</span>
+          </div>
+        </div>
+
+        <!-- Totals -->
+        <div class="totals-preview">
+          <div class="t-row"><span>Subtotal</span><span id="mSubtotal">₹0</span></div>
+          <div class="t-row" id="mDiscountRow" style="display:none; color:#16a34a; font-weight:500;">
+            <span id="mDiscountLabel">Discount</span><span id="mDiscountAmt">-₹0</span>
+          </div>
+          <div class="t-row" id="mPointsRow" style="display:none; color:#d97706; font-weight:500;">
+            <span>Points Discount</span><span id="mPointsAmt">-₹0</span>
+          </div>
+          <div class="t-row"><span>After Discount</span><span id="mAfterDiscount">₹0</span></div>
+          <div class="t-row"><span>GST (5%)</span><span id="mGst">₹0</span></div>
+          <div class="t-grand"><span>Total</span><span id="mTotal">₹0</span></div>
+        </div>
+
+        <button class="btn-green" style="width:100%; margin-top:18px;" onclick="confirmBillGeneration()">
+          ✅ Confirm & Choose Payment
+        </button>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         HEADER
+    ═══════════════════════════════════════════════════════ -->
+    <header>
+      <a href="/" class="back">← Back</a>
+      <h1>{{ table.name }}</h1>
+      <span class="badge" style="background:#fef3c7; color:#d97706;">Bill #{{ bill.id }}</span>
+      <span style="margin-left:auto; font-size:12px; color:#888;">Speak to add items</span>
+    </header>
+
+    <div class="main">
+      <!-- LEFT: Voice + Menu -->
+      <div class="left">
+        <div class="card">
+          <div class="card-title">🎙 Voice Order</div>
+          <div class="mic-wrap">
+            <button class="mic-btn" id="micBtn" onclick="toggleMic()">🎙</button>
+            <div class="mic-hint" id="micHint">Tap to start speaking</div>
+          </div>
+          <div id="transcript-box">Transcript will appear here...</div>
+        </div>
+
+        <div class="card" id="detectedCard" style="display:none;">
+          <div class="card-title" style="display:flex; justify-content:space-between;">
+            <span>✅ Detected Items</span>
+            <button onclick="addAllToBill()" class="add-btn">Add All →</button>
+          </div>
+          <div id="detectedList"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">📋 Full Menu</div>
+          <div id="menuList" style="display:grid; grid-template-columns:1fr 1fr; gap:6px; max-height:260px; overflow-y:auto;"></div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Bill panel -->
+      <div class="right">
+        <div style="font-size:14px; font-weight:600; margin-bottom:12px;">
+          🧾 Current Bill
+          <span style="font-size:12px; font-weight:400; color:#888; margin-left:6px;">{{ table.name }}</span>
+        </div>
+
+        <!-- Guest info bar (shows after guest entry) -->
+        <div id="guestInfoBar">
+          <div class="g-top">
+            <span style="font-size:18px;">👤</span>
+            <div>
+              <div class="g-name" id="guestBarName">Guest</div>
+              <div class="g-mobile" id="guestBarMobile"></div>
+            </div>
+          </div>
+          <div class="g-pts-bar" id="guestPtsBar" style="display:none;">
+            <span class="g-pts-label">🏆 Loyalty Points</span>
+            <span class="g-pts-badge" id="guestBarPoints">⭐ 0</span>
+            <span class="g-pts-worth" id="guestBarWorth">= ₹0</span>
+          </div>
+        </div>
+
+        <div class="bill-items" id="billItems">
+          <div id="emptyState" style="color:#aaa; font-size:13px; padding:20px 0; text-align:center;">
+            No items yet.<br>Use the mic or menu to add items.
+          </div>
+        </div>
+
+        <div class="totals" id="totalsSection" style="display:none;">
+          <div class="total-row"><span>Subtotal</span><span id="subtotal">₹0</span></div>
+          <div class="total-row"><span>GST (5%)</span><span id="gst">₹0</span></div>
+          <div class="total-row grand"><span>Total</span><span id="total">₹0</span></div>
+        </div>
+
+        <button class="gen-btn" id="genBtn" onclick="openBillModal()" disabled>
+          Generate Bill
+        </button>
+
+        <!-- Payment section (shown after bill confirmed) -->
+        <div id="paymentSection" style="display:none; margin-top:16px;">
+          <div style="font-size:12px; font-weight:600; color:#666; margin-bottom:10px;">💳 Select Payment Method</div>
+          <div class="payment-options">
+            <button class="payment-btn cash" onclick="processPayment('cash')">💵 Cash</button>
+            <button class="payment-btn online" onclick="processPayment('online')">🌐 Online</button>
+            <button class="payment-btn card" onclick="processPayment('card')">💳 Card</button>
+          </div>
+          <div id="paymentConfirm">
+            <div style="color:#1565c0; font-weight:600; font-size:13px;">✅ Payment Settled</div>
+            <div style="color:#1565c0; font-size:12px; margin-top:4px;" id="paymentMethodDisplay"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const BILL_ID  = {{ bill.id }};
+      const TABLE_ID = {{ table.id }};
+      const CSRF     = '{{ csrf_token }}';
+      const SESSION_KEY = `guest_t${TABLE_ID}`;
+
+      // ── State ────────────────────────────────────────────────────
+      let currentGuest     = null;   // { name, mobile_number, id, points }
+      let guestPointsAmt   = 0;      // monetary value of redeemed points
+      let guestPointsCount = 0;      // raw points count
+      let billGenerated    = false;
+      let currentBillData  = null;   // bill snapshot when preview opens
+
+      // ── Guest helpers ────────────────────────────────────────────
+      function loadStoredGuest() {
+        const raw = sessionStorage.getItem(SESSION_KEY);
+        if (!raw) return null;
+        try { return JSON.parse(raw); } catch { return null; }
+      }
+
+      function storeGuest(g) {
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify(g));
+      }
+
+      function clearGuest() {
+        sessionStorage.removeItem(SESSION_KEY);
+        currentGuest = null;
+        guestPointsAmt = 0;
+        guestPointsCount = 0;
+      }
+
+      function updateGuestBar() {
+        const bar = document.getElementById('guestInfoBar');
+        if (!currentGuest) { bar.classList.remove('show'); return; }
+        bar.classList.add('show');
+        document.getElementById('guestBarName').textContent   = currentGuest.name || 'Guest';
+        document.getElementById('guestBarMobile').textContent = currentGuest.mobile_number || '';
+        const pts     = currentGuest.points || 0;
+        const ptsBar  = document.getElementById('guestPtsBar');
+        if (pts > 0) {
+          const worth = Math.floor(pts * 0.25);
+          document.getElementById('guestBarPoints').textContent = `⭐ ${pts} pts`;
+          document.getElementById('guestBarWorth').textContent  = `= ₹${worth}`;
+          ptsBar.style.display = 'flex';
+        } else {
+          ptsBar.style.display = 'none';
+        }
+      }
+
+      // ── MODAL 1 — Guest entry ────────────────────────────────────
+      function openGuestModal() {
+        document.getElementById('guestModalOverlay').classList.add('show');
+      }
+
+      function saveGuest() {
+        const name   = document.getElementById('guestNameInput').value.trim();
+        const mobile = document.getElementById('guestMobileInput').value.trim();
+        if (!name)                    { alert('Please enter guest name.'); return; }
+        if (!/^\d{10}$/.test(mobile)) { alert('Please enter a valid 10-digit mobile number.'); return; }
+
+        // Always fetch fresh from backend — never rely on stale sessionStorage for points
+        fetch(`/api/customer/lookup/?mobile=${encodeURIComponent(mobile)}`, { headers: { 'X-CSRFToken': CSRF } })
+          .then(r => r.ok ? r.json() : null)
+          .then(data => {
+            // Support all common field name variants your backend might return
+            const pts = parseInt(
+              data?.points          ??
+              data?.loyalty_points  ??
+              data?.point           ??
+              data?.points_balance  ??
+              data?.total_points    ??
+              0
+            ) || 0;
+
+            currentGuest = {
+              name:          data?.name            || data?.customer_name || name,
+              mobile_number: data?.mobile_number   || data?.mobile        || mobile,
+              id:            data?.id              || data?.customer_id   || null,
+              points:        pts,
+              visit_count:   data?.visit_count     || data?.visits        || 0,
+            };
+
+            // Debug: log what came back so you can verify field names
+            console.log('[Guest Lookup] API response:', data);
+            console.log('[Guest Lookup] Resolved points:', pts);
+
+            storeGuest(currentGuest);
+            document.getElementById('guestModalOverlay').classList.remove('show');
+            updateGuestBar();
+          })
+          .catch((err) => {
+            console.warn('[Guest Lookup] API failed, using entered data:', err);
+            currentGuest = { name, mobile_number: mobile, id: null, points: 0, visit_count: 0 };
+            storeGuest(currentGuest);
+            document.getElementById('guestModalOverlay').classList.remove('show');
+            updateGuestBar();
+          });
+      }
+
+      function skipGuest() {
+        currentGuest = { name: 'Guest', mobile_number: '', id: null, points: 0 };
+        storeGuest(currentGuest);
+        document.getElementById('guestModalOverlay').classList.remove('show');
+        updateGuestBar();
+      }
+
+      // ── MODAL 2 — Points redemption ──────────────────────────────
+      function maybeShowPointsModal(callback) {
+        const pts = currentGuest?.points || 0;
+        if (pts <= 0) { callback(); return; }
+
+        guestPointsCount = pts;
+        // Assume 1 point = ₹0.25 (adjust to your business rule)
+        const worth = Math.floor(pts * 0.25);
+        document.getElementById('pointsAvailDisplay').textContent  = pts;
+        document.getElementById('pointsWorthDisplay').textContent  = `Worth ₹${worth} discount`;
+        document.getElementById('pointsModalSub').textContent      =
+          `${currentGuest.name} has ${pts} loyalty points.`;
+        document.getElementById('pointsModalOverlay').classList.add('show');
+        document.getElementById('pointsModalOverlay')._callback = callback;
+      }
+
+      function skipRedemption() {
+        guestPointsAmt = 0;
+        document.getElementById('pointsModalOverlay').classList.remove('show');
+        const cb = document.getElementById('pointsModalOverlay')._callback;
+        if (cb) cb();
+      }
+
+      function redeemAllPoints() {
+        const pts   = currentGuest?.points || 0;
+        guestPointsAmt   = Math.floor(pts * 0.25); // ₹ value
+        guestPointsCount = pts;
+        document.getElementById('pointsModalOverlay').classList.remove('show');
+        const cb = document.getElementById('pointsModalOverlay')._callback;
+        if (cb) cb();
+      }
+
+      // ── MODAL 3 — Bill preview ───────────────────────────────────
+      async function openBillModal() {
+        // Fetch latest bill data
+        const res  = await fetch(`/api/bill/${BILL_ID}/`, { cache: 'no-store' });
+        const data = await res.json();
+        currentBillData = data;
+
+        // First check if points redemption needed
+        maybeShowPointsModal(() => showBillPreview(data));
+      }
+
+      function showBillPreview(data) {
+        // Subheading
+        document.getElementById('billModalSub').textContent =
+          `${currentGuest?.name || 'Guest'} · Bill #${data.bill_id || BILL_ID}`;
+
+        // Guest card
+        const card = document.getElementById('billGuestCard');
+        if (currentGuest && currentGuest.name !== 'Guest') {
+          card.classList.add('show');
+          const initials = (currentGuest.name || 'G').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+          document.getElementById('billGuestAvatar').textContent  = initials;
+          document.getElementById('billGuestName').textContent    = currentGuest.name;
+          document.getElementById('billGuestMobile').textContent  = currentGuest.mobile_number || '';
+          const pts      = currentGuest.points || 0;
+          const ptsRow   = document.getElementById('billGuestPtsRow');
+          if (pts > 0) {
+            const worth  = Math.floor(pts * 0.25);
+            document.getElementById('billGuestPtsBadge').textContent = `⭐ ${pts} pts`;
+            document.getElementById('billGuestPtsWorth').textContent = `= ₹${worth}`;
+            ptsRow.style.display = 'flex';
+          } else {
+            ptsRow.style.display = 'none';
+          }
+        } else {
+          card.classList.remove('show');
+        }
+
+        // Items list
+        document.getElementById('modalItemsList').innerHTML =
+          (data.items || []).map(i =>
+            `<div class="bill-preview-row">
+               <span>${i.qty}× ${i.name}</span>
+               <span>₹${i.subtotal}</span>
+             </div>`
+          ).join('');
+
+        // Reset manual discount
+        document.getElementById('discountType').value  = 'none';
+        document.getElementById('discountValue').value = '';
+
+        // Show points discount line if points redeemed
+        if (guestPointsAmt > 0) {
+          document.getElementById('pointsDiscountLine').style.display = 'block';
+          document.getElementById('pointsDiscountAmt').textContent = '₹' + guestPointsAmt;
+        } else {
+          document.getElementById('pointsDiscountLine').style.display = 'none';
+        }
+
+        recalcModal();
+        document.getElementById('billModalOverlay').classList.add('show');
+      }
+
+      function closeBillModal() {
+        document.getElementById('billModalOverlay').classList.remove('show');
+      }
+
+      function recalcModal() {
+        if (!currentBillData) return;
+        const subtotal = parseFloat(currentBillData.subtotal) || 0;
+        const type     = document.getElementById('discountType').value;
+        const val      = parseFloat(document.getElementById('discountValue').value) || 0;
+
+        // Manual discount
+        let manualDisc = 0;
+        if (type === 'percent') {
+          manualDisc = Math.min(subtotal, (subtotal * val) / 100);
+          document.getElementById('discountHint').textContent = val > 0 ? `(${val}% off)` : '';
+        } else if (type === 'fixed') {
+          manualDisc = Math.min(subtotal, val);
+          document.getElementById('discountHint').textContent = '';
+        } else {
+          document.getElementById('discountHint').textContent = '';
+        }
+
+        const totalDisc     = manualDisc + guestPointsAmt;
+        const afterDiscount = Math.max(0, subtotal - totalDisc);
+        const gst           = afterDiscount * 0.05;
+        const total         = afterDiscount + gst;
+
+        document.getElementById('mSubtotal').textContent      = '₹' + subtotal.toFixed(2);
+        document.getElementById('mAfterDiscount').textContent = '₹' + afterDiscount.toFixed(2);
+        document.getElementById('mGst').textContent           = '₹' + gst.toFixed(2);
+        document.getElementById('mTotal').textContent         = '₹' + total.toFixed(2);
+
+        // Manual discount row
+        const mDiscRow = document.getElementById('mDiscountRow');
+        if (manualDisc > 0) {
+          mDiscRow.style.display = 'flex';
+          document.getElementById('mDiscountLabel').textContent =
+            type === 'percent' ? `Discount (${val}%)` : 'Discount (fixed)';
+          document.getElementById('mDiscountAmt').textContent = '-₹' + manualDisc.toFixed(2);
+        } else {
+          mDiscRow.style.display = 'none';
+        }
+
+        // Points discount row
+        const mPtsRow = document.getElementById('mPointsRow');
+        if (guestPointsAmt > 0) {
+          mPtsRow.style.display = 'flex';
+          document.getElementById('mPointsAmt').textContent = '-₹' + guestPointsAmt.toFixed(2);
+        } else {
+          mPtsRow.style.display = 'none';
+        }
+      }
+
+      async function confirmBillGeneration() {
+        const type     = document.getElementById('discountType').value;
+        const val      = parseFloat(document.getElementById('discountValue').value) || 0;
+        const subtotal = parseFloat(currentBillData?.subtotal) || 0;
+
+        let manualDisc = 0;
+        if (type === 'percent') manualDisc = Math.min(subtotal, (subtotal * val) / 100);
+        else if (type === 'fixed') manualDisc = Math.min(subtotal, val);
+
+        const totalDiscount  = manualDisc + guestPointsAmt;
+        const afterDiscount  = Math.max(0, subtotal - totalDiscount);
+        const finalTotal     = (afterDiscount * 1.05).toFixed(2);
+
+        const res = await fetch(`/api/bill/${BILL_ID}/generate/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+          body: JSON.stringify({
+            customer_name:    currentGuest?.name    || 'Guest',
+            customer_id:      currentGuest?.id      || null,
+            discount:         totalDiscount.toFixed(2),
+            discount_type:    type,
+            discount_value:   val,
+            points_redeemed:  guestPointsAmt > 0 ? guestPointsCount : 0,
+            points_discount:  guestPointsAmt.toFixed(2),
+            total:            finalTotal,
+          }),
+        });
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          alert(data.error || 'Unable to generate bill. Please add items first.');
+          return;
+        }
+
+        billGenerated = true;
+        closeBillModal();
+        showPaymentSection();
+      }
+
+      function showPaymentSection() {
+        document.getElementById('genBtn').style.display = 'none';
+        document.getElementById('paymentSection').style.display = 'block';
+        document.getElementById('paymentSection').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+
+      // ── Payment ──────────────────────────────────────────────────
+      async function processPayment(method) {
+        const res = await fetch(`/api/bill/${BILL_ID}/set-payment/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+          body: JSON.stringify({ payment_method: method }),
+        });
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          alert(data.error || 'Unable to settle payment.');
+          return;
+        }
+
+        // Mark table free
+        await fetch(`/api/table/${TABLE_ID}/free/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        }).catch(() => {});
+
+        // Clear guest session so next customer starts fresh
+        clearGuest();
+
+        // Show settled state
+        document.querySelectorAll('.payment-btn').forEach(b => { b.disabled = true; b.style.display = 'none'; });
+        document.getElementById('paymentMethodDisplay').textContent =
+          `Method: ${method.charAt(0).toUpperCase() + method.slice(1)}`;
+        document.getElementById('paymentConfirm').style.display = 'block';
+
+        // Redirect to dashboard after short delay
+        setTimeout(() => {
+          stopListening();
+          window.location.href = '/';
+        }, 1200);
+      }
+
+      // ── Bill render ──────────────────────────────────────────────
+      function renderBill(data) {
+        const container = document.getElementById('billItems');
+        const empty     = document.getElementById('emptyState');
+        const totals    = document.getElementById('totalsSection');
+        const genBtn    = document.getElementById('genBtn');
+
+        if (!data.items || !data.items.length) {
+          container.innerHTML = '';
+          container.appendChild(empty);
+          empty.style.display = 'block';
+          totals.style.display = 'none';
+          if (!billGenerated) genBtn.disabled = true;
+          return;
+        }
+
+        empty.style.display = 'none';
+        totals.style.display = 'block';
+        if (!billGenerated) genBtn.disabled = false;
+
+        container.innerHTML = data.items.map(item =>
+          `<div class="bill-row">
+             <span class="bname">${item.qty}× ${item.name}</span>
+             <span class="bprice">₹${item.subtotal}</span>
+             <button class="remove-btn" onclick="removeItem(${item.item_id})" title="Remove">×</button>
+           </div>`
+        ).join('');
+
+        document.getElementById('subtotal').textContent = '₹' + data.subtotal;
+        document.getElementById('gst').textContent      = '₹' + data.gst_amount;
+        document.getElementById('total').textContent    = '₹' + data.total;
+      }
+
+      async function removeItem(itemId) {
+        const res  = await fetch(`/api/bill/${BILL_ID}/remove-item/${itemId}/`, {
+          method: 'POST', headers: { 'X-CSRFToken': CSRF }
+        });
+        renderBill(await res.json());
+      }
+
+      async function refreshBill() {
+        const res  = await fetch(`/api/bill/${BILL_ID}/`, { cache: 'no-store' });
+        const data = await res.json();
+        renderBill(data);
+
+        if (data.status === 'paid') {
+          clearCurrentBillUI(data.payment_method || 'cash');
+        } else if (data.status === 'pending') {
+          billGenerated = true;
+          document.getElementById('genBtn').style.display = 'none';
+          document.getElementById('paymentSection').style.display = 'block';
+        }
+      }
+
+      function clearCurrentBillUI(method) {
+        const empty = document.getElementById('emptyState');
+        empty.innerHTML = 'Payment completed.<br>Table is now free.';
+        empty.style.display = 'block';
+        document.getElementById('totalsSection').style.display = 'none';
+        document.getElementById('genBtn').style.display = 'none';
+        document.querySelectorAll('.payment-btn').forEach(b => { b.disabled = true; b.style.display = 'none'; });
+        document.getElementById('paymentSection').style.display = 'block';
+        document.getElementById('paymentMethodDisplay').textContent =
+          `Method: ${method.charAt(0).toUpperCase() + method.slice(1)}`;
+        document.getElementById('paymentConfirm').style.display = 'block';
+      }
+
+      // ── Detected items ───────────────────────────────────────────
+      let detectedItems = [];
+      function renderDetected() {
+        const card = document.getElementById('detectedCard');
+        const list = document.getElementById('detectedList');
+        if (!detectedItems.length) { card.style.display = 'none'; return; }
+        card.style.display = 'block';
+        list.innerHTML = detectedItems.map((item, i) =>
+          `<div class="detected-item">
+             <span class="iname">${item.qty}× ${item.name}</span>
+             <span class="iprice">₹${item.subtotal}</span>
+             <button class="add-btn" onclick="addOneToBill(${i})">Add</button>
+           </div>`
+        ).join('');
+      }
+
+      async function addAllToBill() {
+        await postItems(detectedItems);
+        detectedItems = [];
+        document.getElementById('detectedCard').style.display = 'none';
+      }
+      async function addOneToBill(idx) {
+        await postItems([detectedItems[idx]]);
+        detectedItems.splice(idx, 1);
+        renderDetected();
+      }
+      async function postItems(items) {
+        const res  = await fetch(`/api/bill/${BILL_ID}/add-items/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+          body: JSON.stringify({ items }),
+        });
+        renderBill(await res.json());
+      }
+
+      // ── Menu ─────────────────────────────────────────────────────
+      async function loadMenu() {
+        const res  = await fetch('/api/menu/');
+        const data = await res.json();
+        document.getElementById('menuList').innerHTML = (data.menu || []).map(item =>
+          `<div onclick="quickAdd(${item.id},'${item.item_name}',${item.price})"
+               style="padding:7px 10px; border:1px solid #e0dfd8; border-radius:8px;
+                      cursor:pointer; font-size:12px; transition:.1s;"
+               onmouseover="this.style.borderColor='#3b82f6'"
+               onmouseout="this.style.borderColor='#e0dfd8'">
+             <div style="font-weight:500;">${item.item_name}</div>
+             <div style="color:#888;">₹${item.price}</div>
+           </div>`
+        ).join('');
+      }
+      async function quickAdd(id, name, price) {
+        await postItems([{ item_id: id, name, qty: 1, price, subtotal: price }]);
+      }
+
+      // ── Voice Recognition ────────────────────────────────────────
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      let recognition = null;
+      let listening   = false;
+      let keepListening = false;
+      let lastText = ''; let lastAt = 0;
+      let lastFP = '';   let lastFPAt = 0;
+      let isProcessingVoice = false;
+      let voiceQueue = [];
+      let reloadTimer = null;
+
+      if (SpeechRecognition) {
+        recognition = new SpeechRecognition();
+        recognition.lang = 'en-IN';
+        recognition.interimResults = true;
+        recognition.continuous = false;
+
+        recognition.onresult = (e) => {
+          let interim = ''; let finalChunk = '';
+          for (let i = e.resultIndex; i < e.results.length; i++) {
+            const r = e.results[i];
+            const t = (r[0]?.transcript || '').trim();
+            if (!t) continue;
+            if (r.isFinal) finalChunk += ' ' + t;
+            else interim += ' ' + t;
+          }
+          const live = (finalChunk || interim).toLowerCase().trim();
+          if (live) document.getElementById('transcript-box').textContent = live;
+
+          if (finalChunk) {
+            const ft = finalChunk.toLowerCase().trim();
+            if (!ft) return;
+            const now = Date.now();
+            if (ft === lastText && now - lastAt < 2200) return;
+            lastText = ft; lastAt = now;
+
+            if (handleBillVoice(ft)) return;
+            if (handleNavVoice(ft)) return;
+
+            clearTimeout(reloadTimer);
+            reloadTimer = setTimeout(() => window.location.reload(), 400);
+            voiceQueue.push(ft);
+            processVoiceQueue();
+          }
+        };
+
+        recognition.onend = () => {
+          listening = false;
+          if (keepListening) setTimeout(() => { try { recognition.start(); } catch(e){} }, 250);
+          else stopListening();
+        };
+        recognition.onerror = (e) => {
+          if (e.error === 'no-speech' || e.error === 'aborted') return;
+          if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+            keepListening = false; stopListening();
+            document.getElementById('micHint').textContent = 'Mic blocked in browser.';
+            return;
+          }
+        };
+      }
+
+      function toggleMic() { listening ? stopListening() : startListening(); }
+      function startListening() {
+        if (!recognition) return;
+        keepListening = listening = true;
+        try { recognition.start(); } catch(e) {}
+        document.getElementById('micBtn').classList.add('listening');
+        document.getElementById('micBtn').textContent = '⏹';
+        document.getElementById('micHint').textContent = 'Listening... speak now';
+        document.getElementById('transcript-box').textContent = '...';
+      }
+      function stopListening() {
+        keepListening = listening = false;
+        if (recognition) try { recognition.stop(); } catch(e) {}
+        document.getElementById('micBtn').classList.remove('listening');
+        document.getElementById('micBtn').textContent = '🎙';
+        document.getElementById('micHint').textContent = 'Tap to start speaking';
+      }
+
+      function handleBillVoice(text) {
+        const compact = text.replace(/[^a-z]/g, '');
+        const billPhrases   = ['generate bill','create bill','show bill','make bill','final bill','finish bill'];
+        const billCompact   = ['generatebill','createbill','showbill','makebill','finalbill','finishbill'];
+        const shouldGenerate = billPhrases.some(p => text.includes(p)) || billCompact.includes(compact);
+        if (shouldGenerate) {
+          clearTimeout(reloadTimer);
+          const btn = document.getElementById('genBtn');
+          if (!btn || btn.disabled || btn.style.display === 'none') {
+            document.getElementById('micHint').textContent = billGenerated ? 'Bill already generated' : 'Add items first';
+            setTimeout(() => { document.getElementById('micHint').textContent = 'Listening... speak now'; }, 1200);
+            return true;
+          }
+          document.getElementById('micHint').textContent = 'Opening bill preview...';
+          // Simulate button click (do NOT auto-submit — only open modal)
+          btn.click();
+          return true;
+        }
+
+        // Payment voice commands
+        const payMap = { cash: ['cash','cahs','kash'], online: ['online','onlin'], card: ['card','crad','kard'] };
+        const hasPayIntent = ['settle','pay','payment'].some(w => text.includes(w));
+        for (const [method, aliases] of Object.entries(payMap)) {
+          if (aliases.some(a => text.includes(a) || compact.includes(a))) {
+            if (hasPayIntent || aliases.includes(compact)) {
+              clearTimeout(reloadTimer);
+              const ps = document.getElementById('paymentSection');
+              if (!ps || ps.style.display === 'none') {
+                document.getElementById('micHint').textContent = 'Generate bill first';
+                setTimeout(() => { document.getElementById('micHint').textContent = 'Listening... speak now'; }, 1200);
+                return true;
+              }
+              processPayment(method);
+              return true;
+            }
+          }
+        }
+        return false;
+      }
+
+      function handleNavVoice(text) {
+        const compact = text.replace(/[^a-z]/g, '');
+        const phrases = ['go to tables','back to tables','go home','go back','dashboard','go to dashboard','tables'];
+        const compacts = ['tables','gototables','backtotables','dashboard','gotodashboard','gohome','goback'];
+        if (phrases.some(p => text.includes(p)) || compacts.includes(compact)) {
+          clearTimeout(reloadTimer);
+          voiceQueue = []; stopListening();
+          document.getElementById('transcript-box').textContent = 'Opening dashboard...';
+          window.location.href = '/';
+          return true;
+        }
+        return false;
+      }
+
+      async function processVoiceQueue() {
+        if (isProcessingVoice || !voiceQueue.length) return;
+        isProcessingVoice = true;
+        const text = voiceQueue.shift();
+        try {
+          document.getElementById('micHint').textContent = 'Processing...';
+          const res  = await fetch('/api/parse-voice/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+            body: JSON.stringify({ text }),
+          });
+          const data = await res.json();
+          detectedItems = data.items || [];
+          if (!detectedItems.length) {
+            document.getElementById('detectedCard').style.display = 'none';
+            document.getElementById('micHint').textContent = 'Listening... speak now';
+            return;
+          }
+          const fp = detectedItems.map(i => `${i.item_id}:${i.qty}`).sort().join('|');
+          const now = Date.now();
+          if (fp === lastFP && now - lastFPAt < 3000) {
+            document.getElementById('micHint').textContent = 'Duplicate ignored';
+            setTimeout(() => { document.getElementById('micHint').textContent = 'Listening... speak now'; }, 700);
+            return;
+          }
+          lastFP = fp; lastFPAt = now;
+          clearTimeout(reloadTimer);
+          await postItems(detectedItems);
+          await refreshBill();
+          detectedItems = [];
+          document.getElementById('detectedCard').style.display = 'none';
+          document.getElementById('micHint').textContent = 'Added!';
+          setTimeout(() => { document.getElementById('micHint').textContent = 'Listening... speak now'; }, 900);
+        } catch (err) {
+          document.getElementById('micHint').textContent = 'Error — try again';
+        } finally {
+          isProcessingVoice = false;
+          if (voiceQueue.length) processVoiceQueue();
+        }
+      }
+
+      // ── Init ─────────────────────────────────────────────────────
+      async function init() {
+        loadMenu();
+        await refreshBill();
+
+        // Guest info: only ask if not stored in session
+        const stored = loadStoredGuest();
+        if (stored) {
+          currentGuest = stored;
+          updateGuestBar();
+          // Re-fetch fresh points from backend (stored data may be stale)
+          if (stored.mobile_number && stored.mobile_number !== '' && stored.mobile_number !== 'N/A') {
+            fetch(`/api/customer/lookup/?mobile=${encodeURIComponent(stored.mobile_number)}`, { headers: { 'X-CSRFToken': CSRF } })
+              .then(r => r.ok ? r.json() : null)
+              .then(data => {
+                if (!data) return;
+                const pts = parseInt(
+                  data?.points          ??
+                  data?.loyalty_points  ??
+                  data?.point           ??
+                  data?.points_balance  ??
+                  data?.total_points    ??
+                  0
+                ) || 0;
+                console.log('[Init] Fresh points from API:', pts, data);
+                currentGuest.points     = pts;
+                currentGuest.id         = data?.id || data?.customer_id || currentGuest.id;
+                currentGuest.visit_count = data?.visit_count || data?.visits || 0;
+                storeGuest(currentGuest);
+                updateGuestBar();
+              })
+              .catch(err => console.warn('[Init] Points re-fetch failed:', err));
+          }
+        } else {
+          openGuestModal();
+        }
+
+        // Auto-start mic on page load
+        if (SpeechRecognition) {
+          setTimeout(() => startListening(), 600);
+        }
+      }
+      init();
+    </script>
+  </body>
+</html>
++
