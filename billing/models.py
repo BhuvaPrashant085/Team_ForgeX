@@ -83,8 +83,7 @@ class Bill(models.Model):
 class Staff(models.Model):
     ROLE_CHOICES = [
         ('manager', 'Manager'),
-        ('waiter', 'Waiter'),
-        ('chef', 'Chef'),
+        ('captain', 'Captain'),
         ('cashier', 'Cashier'),
     ]
     name = models.CharField(max_length=100)
